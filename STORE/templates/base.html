@@ -16,18 +16,24 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav">
+                {% if request.path != '/' and request.path != '/login' and request.path != '/register' %}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('index') }}">Home</a>
                 </li>
+                {% endif %}
                 <!-- Add other navigation links here -->
             </ul>
         </div>
         <div class="navbar-nav ml-auto">
             {% if current_user.is_authenticated %}
-                <span class="navbar-text me-3">Welcome, {{ current_user.username }}</span>
-                <a href="{{ url_for('logout') }}" class="nav-item nav-link">Logout</a>
+                {% if request.path != '/' %}
+                    <span class="navbar-text me-3">Welcome, {{ current_user.username }}</span>
+                    <a href="{{ url_for('logout') }}" class="nav-item nav-link">Logout</a>
+                {% endif %}
             {% else %}
-                <a href="{{ url_for('login') }}" class="nav-item nav-link">Login</a>
+                {% if request.path != '/' and request.path != '/login' and request.path != '/register' %}
+                    <a href="{{ url_for('login') }}" class="nav-item nav-link">Login</a>
+                {% endif %}
             {% endif %}
         </div>
     </nav>
