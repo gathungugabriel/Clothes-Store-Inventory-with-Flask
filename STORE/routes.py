@@ -10,28 +10,13 @@ def login():
         return redirect(url_for('index'))
     form = LoginForm()
     if form.validate_on_submit():
-        # Print form data
-        print('Form data:', form.username.data, form.password.data)
-        
-        # Query the database for the user
         user = User.query.filter_by(username=form.username.data).first()
-        if user:
-            # Check if the password matches
-            if user.check_password(form.password.data):
-                # Print a message to confirm successful authentication
-                print('User authenticated:', user.username)
-                
-                # Log in the user
-                login_user(user)
-                
-                # Redirect the user to the home page
-                return redirect(url_for('index'))
-            else:
-                flash('Invalid username or password', 'error')
+        if user and user.check_password(form.password.data):
+            login_user(user)
+            return redirect(url_for('index'))
         else:
             flash('Invalid username or password', 'error')
     return render_template('login.html', form=form)
-
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -51,9 +36,16 @@ def register():
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('index'))
+    return redirect(url_for('initial'))
 
 @app.route('/')
+def initial():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    return render_template('initial.html')
+
+@app.route('/index')
+@login_required
 def index():
     products = Product.query.all()
     return render_template('index.html', products=products)
@@ -64,6 +56,7 @@ def add_product():
     form = ProductForm()
     if form.validate_on_submit():
         product = Product(
+            barcode=form.barcode.data,
             name=form.name.data,
             description=form.description.data,
             price=form.price.data,
