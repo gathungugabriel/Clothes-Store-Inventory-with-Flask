@@ -1,25 +1,65 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1 class="mb-4">Inventory</h1>
-
     <div class="row">
-        {% for product in products %}
-            <div class="col-md-4">
-                <div class="card mb-4">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ product.name }}</h5>
-                        <p class="card-text">Description: {{ product.description }}</p>
-                        <p class="card-text">Price: ${{ product.price }}</p>
-                        <p class="card-text">Stock: {{ product.stock }}</p>
-                        <!-- Add buttons for update and delete -->
-                        <a href="{{ url_for('update_product', id=product.id) }}" class="btn btn-primary mr-2">Update</a>
-                        <form action="{{ url_for('delete_product', id=product.id) }}" method="post" style="display: inline;">
-                            <button type="submit" class="btn btn-danger">Delete</button>
-                        </form>
-                    </div>
-                </div>
+        <!-- Sidebar menu -->
+        <div class="col-md-3">
+            <h3>Sidebar Menu</h3>
+            <ul class="list-group">
+                <li class="list-group-item"><a href="{{ url_for('add_product') }}">Add Product</a></li>
+                <li class="list-group-item" id="showTableButton"><a href="#">Show Product Table</a></li>
+            </ul>
+        </div>
+        
+        <!-- Main section -->
+        <div class="col-md-9">
+            <h1 class="mb-4">Product Inventory</h1>
+            <!-- Add a search input field -->
+            <div class="mb-3">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search products...">
             </div>
-        {% endfor %}
+            <!-- Add a div to contain the table, initially hidden -->
+            <div id="productTableContainer" style="display: none;">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">ID</th>
+                            <th scope="col">Code</th>
+                            <th scope="col">Item</th>
+                            <th scope="col">Type/Material</th>
+                            <th scope="col">Size</th>
+                            <th scope="col">Color</th>
+                            <th scope="col">Description</th>
+                            <th scope="col">Price</th>
+                            <th scope="col">Quantity</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productTableBody">
+                        {% for product in products %}
+                            <tr>
+                                <th scope="row">{{ product.id }}</th>
+                                <td>{{ product.code }}</td>
+                                <td>{{ product.item }}</td>
+                                <td>{{ product.type_material }}</td>
+                                <td>{{ product.size }}</td>
+                                <td>{{ product.color }}</td>
+                                <td>{{ product.description }}</td>
+                                <td>${{ product.price }}</td>
+                                <td>{{ product.quantity }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 {% endblock %}
+
+<!-- Add the script tag for the search functionality -->
+<script src="{{ url_for('static', filename='js/search.js') }}"></script>
+<script>
+    // JavaScript to show the table when the button is clicked
+    document.getElementById("showTableButton").addEventListener("click", function() {
+        document.getElementById("productTableContainer").style.display = "block";
+    });
+</script>

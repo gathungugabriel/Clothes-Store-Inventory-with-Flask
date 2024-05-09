@@ -20,12 +20,14 @@ class User(UserMixin, db.Model):
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    barcode = db.Column(db.String(20), unique=True, nullable=False)
-    name = db.Column(db.String(100), nullable=False)
+    code = db.Column(db.String(20), unique=True, nullable=False)
+    item = db.Column(db.String(100), nullable=False)
+    type_material = db.Column(db.String(100), nullable=False)
+    size = db.Column(db.String(20), nullable=False)
+    color = db.Column(db.String(50), nullable=False)
     description = db.Column(db.Text, nullable=False)
     price = db.Column(db.Float, nullable=False)
-    stock = db.Column(db.Integer, nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
 
     def __repr__(self):
-        return f"Product('{self.barcode}', '{self.name}', '{self.description}', '{self.price}', '{self.stock}')"
-
+        return f"Product('{self.code}', '{self.item}', '{self.type_material}', '{self.size}', '{self.color}', '{self.description}', '{self.price}', '{self.quantity}')"

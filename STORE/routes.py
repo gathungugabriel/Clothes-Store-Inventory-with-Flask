@@ -1,8 +1,8 @@
 from flask import render_template, redirect, url_for, flash
 from flask_login import login_user, logout_user, current_user, login_required
 from . import app, db
-from .forms import LoginForm, RegistrationForm, ProductForm  # Import ProductForm
-from .models import User, Product  # Import Product model
+from .forms import LoginForm, RegistrationForm, ProductForm
+from .models import User, Product
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -51,16 +51,19 @@ def index():
     return render_template('index.html', products=products)
 
 @app.route('/add_product', methods=['GET', 'POST'])
-@login_required  # Require login to add a product
+@login_required
 def add_product():
     form = ProductForm()
     if form.validate_on_submit():
         product = Product(
-            barcode=form.barcode.data,
-            name=form.name.data,
+            code=form.code.data,
+            item=form.item.data,
+            type_material=form.type_material.data,
+            size=form.size.data,
+            color=form.color.data,
             description=form.description.data,
             price=form.price.data,
-            stock=form.stock.data
+            quantity=form.quantity.data
         )
         db.session.add(product)
         db.session.commit()
@@ -69,22 +72,26 @@ def add_product():
     return render_template('add_product.html', form=form)
 
 @app.route('/update_product/<int:id>', methods=['GET', 'POST'])
-@login_required  # Require login to update a product
+@login_required
 def update_product(id):
     product = Product.query.get_or_404(id)
     form = ProductForm(obj=product)
     if form.validate_on_submit():
-        product.name = form.name.data
+        product.code = form.code.data
+        product.item = form.item.data
+        product.type_material = form.type_material.data
+        product.size = form.size.data
+        product.color = form.color.data
         product.description = form.description.data
         product.price = form.price.data
-        product.stock = form.stock.data
+        product.quantity = form.quantity.data
         db.session.commit()
         flash('Product updated successfully!', 'success')
         return redirect(url_for('index'))
     return render_template('update_product.html', form=form, product=product)
 
 @app.route('/delete_product/<int:id>', methods=['POST'])
-@login_required  # Require login to delete a product
+@login_required
 def delete_product(id):
     product = Product.query.get_or_404(id)
     db.session.delete(product)

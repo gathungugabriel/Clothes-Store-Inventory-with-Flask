@@ -3,11 +3,14 @@ from wtforms import StringField, BooleanField, TextAreaField, FloatField, Intege
 from wtforms.validators import DataRequired, NumberRange, Email, EqualTo, Length
 
 class ProductForm(FlaskForm):
-    barcode = StringField('Barcode', validators=[DataRequired()])
-    name = StringField('Name', validators=[DataRequired()])
+    code = StringField('Code', validators=[DataRequired()])
+    item = StringField('Item', validators=[DataRequired()])
+    type_material = StringField('Type/Material', validators=[DataRequired()])
+    size = StringField('Size', validators=[DataRequired()])
+    color = StringField('Color', validators=[DataRequired()])
     description = TextAreaField('Description', validators=[DataRequired()])
     price = FloatField('Price', validators=[DataRequired(), NumberRange(min=0)])
-    stock = IntegerField('Stock', validators=[DataRequired(), NumberRange(min=0)])
+    quantity = IntegerField('Quantity', validators=[DataRequired(), NumberRange(min=0)])
     submit = SubmitField('Submit')
 
 class LoginForm(FlaskForm):
@@ -21,9 +24,3 @@ class RegistrationForm(FlaskForm):
     confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
     is_admin = BooleanField('Admin')
 
-class ProductForm(FlaskForm):
-    barcode = StringField('barcode')
-    name = StringField('Name', validators=[DataRequired()])
-    description = TextAreaField('Description', validators=[DataRequired()])
-    price = FloatField('Price', validators=[DataRequired()])
-    stock = IntegerField('Stock', validators=[DataRequired()])
