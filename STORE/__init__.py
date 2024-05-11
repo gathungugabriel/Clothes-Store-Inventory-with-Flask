@@ -9,8 +9,11 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key_here'
 
 # Configure SQLite database
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///C:\\Users\\gabriel.githinji\\Desktop\\tests\\1\\instance\\your_database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///C:\\Users\\Gabriel\\Desktop\\Coding\\FLASK SHOp\\instance\\your_database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Configure the static folder
+app.static_folder = 'static'
 
 # Initialize SQLAlchemy database
 db = SQLAlchemy(app)

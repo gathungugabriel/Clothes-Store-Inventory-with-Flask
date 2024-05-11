@@ -29,5 +29,18 @@ class Product(db.Model):
     price = db.Column(db.Float, nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
 
+    def serialize(self):
+        return {
+            'id': self.id,
+            'code': self.code,
+            'item': self.item,
+            'type_material': self.type_material,
+            'size': self.size,
+            'color': self.color,
+            'description': self.description,
+            'price': self.price,
+            'quantity': self.quantity
+        }
+
     def __repr__(self):
         return f"Product('{self.code}', '{self.item}', '{self.type_material}', '{self.size}', '{self.color}', '{self.description}', '{self.price}', '{self.quantity}')"

@@ -4,22 +4,21 @@
     <div class="row">
         <!-- Sidebar menu -->
         <div class="col-md-3">
-            <h3>Sidebar Menu</h3>
-            <ul class="list-group">
-                <li class="list-group-item"><a href="{{ url_for('add_product') }}">Add Product</a></li>
-                <li class="list-group-item" id="showTableButton"><a href="#">Show Product Table</a></li>
-            </ul>
+            <h3>Dash board</h3>
+            <!-- Add Product button -->
+            <a href="{{ url_for('add_product') }}" class="btn btn-primary mb-3">Add Product</a>
         </div>
         
         <!-- Main section -->
         <div class="col-md-9">
             <h1 class="mb-4">Product Inventory</h1>
             <!-- Add a search input field -->
-            <div class="mb-3">
+            <div class="input-group mb-3">
                 <input type="text" id="searchInput" class="form-control" placeholder="Search products...">
+                <button class="btn btn-primary" type="button" id="searchButton">Search</button>
             </div>
-            <!-- Add a div to contain the table, initially hidden -->
-            <div id="productTableContainer" style="display: none;">
+            <!-- Add a div to contain the table -->
+            <div id="productTableContainer">
                 <table class="table">
                     <thead>
                         <tr>
@@ -46,20 +45,17 @@
                                 <td>{{ product.description }}</td>
                                 <td>${{ product.price }}</td>
                                 <td>{{ product.quantity }}</td>
+                                <td>
+                                    <a class="btn btn-primary" href="{{ url_for('update_product', id=product.id) }}">Update</a>
+                                    <a class="btn btn-danger" href="{{ url_for('delete_product_by_id', id=product.id) }}">Delete</a>
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+                <!-- No results message -->
+                <div id="noResultsMessage" style="display: none;">No results found.</div>
             </div>
         </div>
     </div>
 {% endblock %}
-
-<!-- Add the script tag for the search functionality -->
-<script src="{{ url_for('static', filename='js/search.js') }}"></script>
-<script>
-    // JavaScript to show the table when the button is clicked
-    document.getElementById("showTableButton").addEventListener("click", function() {
-        document.getElementById("productTableContainer").style.display = "block";
-    });
-</script>
