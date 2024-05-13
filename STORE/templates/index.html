@@ -7,6 +7,15 @@
             <h3>Dash board</h3>
             <!-- Add Product button -->
             <a href="{{ url_for('add_product') }}" class="btn btn-primary mb-3">Add Product</a>
+
+            <form action="{{ url_for('make_sale') }}" method="get">
+                <button type="submit" class="btn btn-primary mb-3">Make Sale</button>
+            </form>
+
+            <form action="{{ url_for('sales') }}" method="post">
+                <button type="submit" class="btn btn-primary mb-3">Sales</button>
+            </form>
+            
         </div>
         
         <!-- Main section -->

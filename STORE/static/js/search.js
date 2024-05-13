@@ -92,3 +92,4 @@ document.addEventListener('DOMContentLoaded', function() {
     const productRows = document.querySelectorAll('#productTableBody tr');
     searchInput.addEventListener('input', filterProducts);
 });
+

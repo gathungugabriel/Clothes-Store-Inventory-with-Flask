@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mt-4 mb-4">Sales</h1>
+
+    <!-- Add a form for filtering criteria -->
+    <form action="{{ url_for('sales') }}" method="GET">
+        <div class="mb-3">
+            <label for="start_date">Start Date:</label>
+            <input type="date" id="start_date" name="start_date">
+        </div>
+        <div class="mb-3">
+            <label for="end_date">End Date:</label>
+            <input type="date" id="end_date" name="end_date">
+        </div>
+        <div class="mb-3">
+            <label for="product">Product:</label>
+            <select name="product" id="product" multiple>
+                <option value="">All Products</option>
+                <!-- Populate options dynamically with products from the database -->
+                {% for product in products %}
+                <option value="{{ product.id }}">{{ product.item }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Apply Filters</button>
+    </form>
+
+    <!-- Display sales data -->
+    <div class="table-responsive">
+        <!-- Table to display filtered sales data -->
+        <!-- Modify as needed -->
+    </div>
+
+    <!-- Display sales data -->
+    <div class="table-responsive">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Product</th>
+                    <th>Quantity Sold</th>
+                    <th>Price per Unit</th>
+                    <th>Total Sale Amount</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sale in sales %}
+                <tr>
+                    <td>{{ sale.id }}</td>
+                    <td>{{ sale.product.item }}</td>
+                    <td>{{ sale.quantity_sold }}</td>
+                    <td>${{ sale.product.price }}</td>
+                    <td>${{ sale.quantity_sold * sale.product.price }}</td>
+                    <td>{{ sale.sale_date }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Display total amounts -->
+    <div>
+        <h3>Total Amount from Sales:</h3>
+        <p>${{ total_sales_amount }}</p>
+    </div>
+</div>
+{% endblock %}

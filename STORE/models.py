@@ -1,6 +1,8 @@
 from . import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime, timezone
+from sqlalchemy.orm import relationship
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -28,6 +30,7 @@ class Product(db.Model):
     description = db.Column(db.Text, nullable=False)
     price = db.Column(db.Float, nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
+    sales = relationship('Sale', backref='product')  # Establishing the relationship
 
     def serialize(self):
         return {
@@ -44,3 +47,9 @@ class Product(db.Model):
 
     def __repr__(self):
         return f"Product('{self.code}', '{self.item}', '{self.type_material}', '{self.size}', '{self.color}', '{self.description}', '{self.price}', '{self.quantity}')"
+
+class Sale(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    quantity_sold = db.Column(db.Integer, nullable=False)
+    sale_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
