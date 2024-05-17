@@ -49,7 +49,6 @@
                     <table class="table">
                         <thead>
                             <tr>
-                                <th scope="col">ID</th>
                                 <th scope="col">Code</th>
                                 <th scope="col">Item</th>
                                 <th scope="col">Type/Material</th>
@@ -61,39 +60,18 @@
                             </tr>
                         </thead>
                         <tbody id="productTableBody">
-                            <tr>
-                                <th scope="row">1</th>
-                                <td>CM001</td>
-                                <td>Trouser</td>
-                                <td>Jeans</td>
-                                <td>XX</td>
-                                <td>Blue</td>
-                                <td>Savco</td>
-                                <td>$2000.0</td>
-                                <td>15</td>
-                            </tr>
-                            <tr>
-                                <th scope="row">2</th>
-                                <td>AM001</td>
-                                <td>Belt</td>
-                                <td>Leather</td>
-                                <td>X</td>
-                                <td>Brown</td>
-                                <td>Ile ngumu</td>
-                                <td>$250.0</td>
-                                <td>14</td>
-                            </tr>
-                            <tr>
-                                <th scope="row">3</th>
-                                <td>AM005</td>
-                                <td>Dress</td>
-                                <td>Leather</td>
-                                <td>X</td>
-                                <td>Green</td>
-                                <td>With white Strips</td>
-                                <td>$800.0</td>
-                                <td>48</td>
-                            </tr>
+                            {% for product in products %}
+                                <tr>
+                                    <td>{{ product.code }}</td>
+                                    <td>{{ product.item }}</td>
+                                    <td>{{ product.type_material }}</td>
+                                    <td>{{ product.size }}</td>
+                                    <td>{{ product.color }}</td>
+                                    <td>{{ product.description }}</td>
+                                    <td>${{ product.price }}</td>
+                                    <td>{{ product.quantity }}</td>
+                                </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>

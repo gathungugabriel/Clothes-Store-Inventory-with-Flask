@@ -1,70 +1,72 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <div class="row">
-        <!-- Sidebar menu -->
-        <div class="col-md-3">
-            <h3>Dash board</h3>
-            <!-- Add Product button -->
-            <a href="{{ url_for('add_product') }}" class="btn btn-primary mb-3">Add Product</a>
-
-            <form action="{{ url_for('make_sale') }}" method="get">
-                <button type="submit" class="btn btn-primary mb-3">Make Sale</button>
-            </form>
-
-            <form action="{{ url_for('sales') }}" method="post">
-                <button type="submit" class="btn btn-primary mb-3">Sales</button>
-            </form>
-            
+<div class="row">
+    <div class="col-md-3">
+        <h3>Dashboard</h3>
+        <a href="{{ url_for('add_product') }}" class="btn btn-primary mb-3">Add Product</a>
+        <form action="{{ url_for('make_sale') }}" method="get">
+            <button type="submit" class="btn btn-primary mb-3">Make Sale</button>
+        </form>
+        <form action="{{ url_for('sales') }}" method="post">
+            <button type="submit" class="btn btn-primary mb-3">Sales</button>
+        </form>
+    </div>
+    <div class="col-md-9">
+        <h1 class="mb-4">Product Inventory</h1>
+        <div class="input-group mb-3">
+            <input type="text" id="searchInput" class="form-control" placeholder="Search products...">
+            <button class="btn btn-primary" type="button" id="searchButton">Search</button>
         </div>
-        
-        <!-- Main section -->
-        <div class="col-md-9">
-            <h1 class="mb-4">Product Inventory</h1>
-            <!-- Add a search input field -->
-            <div class="input-group mb-3">
-                <input type="text" id="searchInput" class="form-control" placeholder="Search products...">
-                <button class="btn btn-primary" type="button" id="searchButton">Search</button>
-            </div>
-            <!-- Add a div to contain the table -->
-            <div id="productTableContainer">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th scope="col">ID</th>
-                            <th scope="col">Code</th>
-                            <th scope="col">Item</th>
-                            <th scope="col">Type/Material</th>
-                            <th scope="col">Size</th>
-                            <th scope="col">Color</th>
-                            <th scope="col">Description</th>
-                            <th scope="col">Price</th>
-                            <th scope="col">Quantity</th>
-                        </tr>
-                    </thead>
-                    <tbody id="productTableBody">
-                        {% for product in products %}
-                            <tr>
-                                <th scope="row">{{ product.id }}</th>
-                                <td>{{ product.code }}</td>
-                                <td>{{ product.item }}</td>
-                                <td>{{ product.type_material }}</td>
-                                <td>{{ product.size }}</td>
-                                <td>{{ product.color }}</td>
-                                <td>{{ product.description }}</td>
-                                <td>${{ product.price }}</td>
-                                <td>{{ product.quantity }}</td>
-                                <td>
-                                    <a class="btn btn-primary" href="{{ url_for('update_product', id=product.id) }}">Update</a>
-                                    <a class="btn btn-danger" href="{{ url_for('delete_product_by_id', id=product.id) }}">Delete</a>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                <!-- No results message -->
-                <div id="noResultsMessage" style="display: none;">No results found.</div>
-            </div>
+        <div id="productTableContainer">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th scope="col">Item</th>
+                        <th scope="col">Type/Material</th>
+                        <th scope="col">Size</th>
+                        <th scope="col">Price</th>
+                        <th scope="col">Category Quantity</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="productTableBody">
+                    {% for product in products %}
+                    <tr>
+                        <td>{{ product.item }}</td>
+                        <td>{{ product.type_material }}</td>
+                        <td>{{ product.size }}</td>
+                        <td>${{ product.price }}</td>
+                        <td>{{ product.total_quantity }}</td>
+                        <td>
+                            <button class="btn btn-info toggle-button" 
+                                    data-item="{{ product.item }}"
+                                    data-type-material="{{ product.type_material }}"
+                                    data-size="{{ product.size }}"
+                                    data-price="{{ product.price }}">List</button>
+                        </td>
+                    </tr>
+                    <tr class="nested-table-container d-none" id="items_{{ product.item.replace(' ', '_') }}">
+                        <td colspan="6">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Code</th>
+                                        <th scope="col">Item</th>
+                                        <th scope="col">Color</th>
+                                        <th scope="col">Description</th>
+                                        <th scope="col">Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div id="noResultsMessage" class="alert alert-info d-none" role="alert">No results found.</div>
         </div>
     </div>
+</div>
 {% endblock %}

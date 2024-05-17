@@ -6,8 +6,12 @@
     <div class="row justify-content-center">
         <div class="col-md-6">
             <h2 class="mb-4">Update Product</h2>
-            <form method="POST">
+            <form method="POST" action="{{ url_for('update_product', code=product.code) }}">
                 {{ form.hidden_tag() }}
+                <div class="form-group">
+                    {{ form.code.label(class="form-label") }}
+                    {{ form.code(class="form-control", readonly=true) }}
+                </div>
                 <div class="form-group">
                     {{ form.item.label(class="form-label") }}
                     {{ form.item(class="form-control") }}

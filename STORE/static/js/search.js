@@ -1,42 +1,128 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Function to display filtered results
+    console.log('DOMContentLoaded event fired');
+
+    function attachToggleEventListeners() {
+        const toggleButtons = document.querySelectorAll('.toggle-button');
+        console.log('Found', toggleButtons.length, 'toggle buttons');
+
+        toggleButtons.forEach(button => {
+            console.log('Attaching event listener to button:', button);
+            button.addEventListener('click', function() {
+                const item = this.getAttribute('data-item');
+                const typeMaterial = this.getAttribute('data-type-material');
+                const size = this.getAttribute('data-size');
+                const price = this.getAttribute('data-price');
+                const itemList = document.getElementById(`items_${item.replace(/\s+/g, '_')}`);
+
+                console.log('Clicked toggle button for item:', item);
+
+                fetch('/expand_items', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        item: item,
+                        type_material: typeMaterial,
+                        size: size,
+                        price: price
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Fetched data:', data);
+                    if (!itemList) {
+                        console.error(`Item list container not found for item: ${item}`);
+                        return;
+                    }
+                    let tableHTML = '';
+                    data.forEach(product => {
+                        tableHTML += `
+                            <tr>
+                                <td>${product.code}</td>
+                                <td>${product.item}</td>
+                                <td>${product.color}</td>
+                                <td>${product.description}</td>
+                                <td>${product.price}</td>
+                            </tr>`;
+                    });
+
+                    itemList.innerHTML = `
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Code</th>
+                                    <th scope="col">Item</th>
+                                    <th scope="col">Color</th>
+                                    <th scope="col">Description</th>
+                                    <th scope="col">Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tableHTML}
+                            </tbody>
+                        </table>`;
+                    itemList.classList.toggle('d-none');
+                })
+                .catch(error => {
+                    console.error('Error fetching items:', error);
+                    if (itemList) {
+                        itemList.textContent = 'An error occurred while fetching items. Please try again later.';
+                        itemList.classList.toggle('d-none');
+                    }
+                });
+            });
+        });
+
+        console.log('Event listeners attached to toggle buttons');
+    }
+
     function displayFilteredResults(filteredData) {
+        console.log('displayFilteredResults called with data:', filteredData);
         const productTableBody = document.getElementById('productTableBody');
         let tableHTML = '';
 
-        // Clear previous results
         productTableBody.innerHTML = '';
 
-        // Populate table with filtered data
         filteredData.forEach(product => {
             tableHTML += `
                 <tr>
-                    <td>${product.id}</td>
-                    <td>${product.code}</td>
                     <td>${product.item}</td>
                     <td>${product.type_material}</td>
                     <td>${product.size}</td>
-                    <td>${product.color}</td>
-                    <td>${product.description}</td>
                     <td>${product.price}</td>
                     <td>${product.quantity}</td>
+                    <td>
+                        <button class="btn btn-info toggle-button" 
+                                data-item="${product.item}"
+                                data-type-material="${product.type_material}"
+                                data-size="${product.size}"
+                                data-price="${product.price}">List</button>
+                        <div id="items_${product.item.replace(/\s+/g, '_')}" style="display: none;">
+                            <!-- List of items goes here -->
+                        </div>
+                    </td>
                 </tr>`;
         });
 
-        // Update the table body with the new HTML content
         productTableBody.innerHTML = tableHTML;
-
-        // Show the product table
         document.getElementById('productTableContainer').style.display = 'block';
+
+        attachToggleEventListeners();
     }
 
-    // Add event listener to the search button
     const searchButton = document.getElementById('searchButton');
     if (searchButton) {
         searchButton.addEventListener('click', function() {
+            console.log('Search button clicked');
             const searchInput = document.getElementById('searchInput').value.trim().toLowerCase();
+            console.log('Search term:', searchInput);
 
-            // Send an AJAX request to filter products
             fetch('/filter_products', {
                 method: 'POST',
                 headers: {
@@ -51,45 +137,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(data => {
-                // Display filtered results
+                console.log('Filtered data received:', data);
                 displayFilteredResults(data.products);
+                if (data.products.length === 0) {
+                    document.getElementById('noResultsMessage').style.display = 'block';
+                } else {
+                    document.getElementById('noResultsMessage').style.display = 'none';
+                }
             })
             .catch(error => {
                 console.error('Error filtering products:', error);
+                const productTableBody = document.getElementById('productTableBody');
+                productTableBody.textContent = 'An error occurred while filtering products. Please try again later.';
             });
         });
     } else {
         console.error('Search button not found');
     }
+
+    attachToggleEventListeners();
 });
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Function to filter products based on search term
-    function filterProducts() {
-        const searchTerm = searchInput.value.trim().toLowerCase();
-        console.log('Search term:', searchTerm); // Debugging
-
-        productRows.forEach(function(row) {
-            const rowData = row.textContent.toLowerCase();
-            if (rowData.includes(searchTerm)) {
-                row.style.display = ''; // Show the row if it matches the search term
-            } else {
-                row.style.display = 'none'; // Hide the row if it doesn't match
-            }
-        });
-
-        // Show/hide no results message based on whether any rows are visible
-        const noResultsMessage = document.getElementById('noResultsMessage');
-        if (productRows.length === 0 || [...productRows].every(row => row.style.display === 'none')) {
-            noResultsMessage.style.display = 'block'; // Show message if no rows are visible
-        } else {
-            noResultsMessage.style.display = 'none'; // Hide message if at least one row is visible
-        }
-    }
-
-    // Add event listener for input change in search input field
-    const searchInput = document.getElementById('searchInput');
-    const productRows = document.querySelectorAll('#productTableBody tr');
-    searchInput.addEventListener('input', filterProducts);
-});
-
