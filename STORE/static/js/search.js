@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </tr>`;
                     });
 
-                    itemList.innerHTML = `
+                    itemList.querySelector('td').innerHTML = `
                         <table class="table table-bordered">
                             <thead>
                                 <tr>
@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 .catch(error => {
                     console.error('Error fetching items:', error);
                     if (itemList) {
-                        itemList.textContent = 'An error occurred while fetching items. Please try again later.';
+                        itemList.querySelector('td').textContent = 'An error occurred while fetching items. Please try again later.';
                         itemList.classList.toggle('d-none');
                     }
                 });
@@ -96,16 +96,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td>${product.type_material}</td>
                     <td>${product.size}</td>
                     <td>${product.price}</td>
-                    <td>${product.quantity}</td>
                     <td>
                         <button class="btn btn-info toggle-button" 
                                 data-item="${product.item}"
                                 data-type-material="${product.type_material}"
                                 data-size="${product.size}"
                                 data-price="${product.price}">List</button>
-                        <div id="items_${product.item.replace(/\s+/g, '_')}" style="display: none;">
-                            <!-- List of items goes here -->
-                        </div>
+                    </td>
+                </tr>
+                <tr id="items_${product.item.replace(/\s+/g, '_')}" class="nested-table-container d-none">
+                    <td colspan="5">
+                        <!-- List of items goes here -->
                     </td>
                 </tr>`;
         });

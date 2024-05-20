@@ -46,20 +46,9 @@
                                     data-price="{{ product.price }}">List</button>
                         </td>
                     </tr>
-                    <tr class="nested-table-container d-none" id="items_{{ product.item.replace(' ', '_') }}">
+                    <tr id="items_{{ product.item.replace(' ', '_') }}" class="nested-table-container d-none">
                         <td colspan="6">
-                            <table class="table table-bordered">
-                                <thead>
-                                    <tr>
-                                        <th scope="col">Code</th>
-                                        <th scope="col">Item</th>
-                                        <th scope="col">Color</th>
-                                        <th scope="col">Description</th>
-                                        <th scope="col">Price</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
+                            <!-- Nested items will be loaded here dynamically -->
                         </td>
                     </tr>
                     {% endfor %}
@@ -69,4 +58,5 @@
         </div>
     </div>
 </div>
+<script src="{{ url_for('static', filename='search.js') }}"></script>
 {% endblock %}

@@ -2,7 +2,7 @@ from . import db
 from sqlalchemy.orm import relationship
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timezone
+from datetime import datetime
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -27,7 +27,7 @@ class Product(db.Model):
     color = db.Column(db.String(50), nullable=False)
     description = db.Column(db.Text, nullable=False)
     price = db.Column(db.Float, nullable=False)
-    quantity = db.Column(db.Integer, nullable=False)
+    quantity = db.Column(db.Integer, nullable=False, default=1)  # Default quantity set to 1
     sales = relationship('Sale', backref='product', lazy=True)  # Relationship with Sale model
 
     def serialize(self):
@@ -38,15 +38,31 @@ class Product(db.Model):
             'size': self.size,
             'color': self.color,
             'description': self.description,
-            'price': self.price,
-            'quantity': self.quantity
+            'price': self.price
         }
 
     def __repr__(self):
-        return f"Product('{self.code}', '{self.item}', '{self.type_material}', '{self.size}', '{self.color}', '{self.description}', '{self.price}', '{self.quantity}')"
+        return f"Product('{self.code}', '{self.item}', '{self.type_material}', '{self.size}', '{self.color}', '{self.description}', '{self.price}')"
 
 class Sale(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     product_code = db.Column(db.String(20), db.ForeignKey('product.code'), nullable=False)  # ForeignKey to product code
     quantity_sold = db.Column(db.Integer, nullable=False)
     sale_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+class Invoice(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    customer_name = db.Column(db.String(128), nullable=False)
+    customer_email = db.Column(db.String(128), nullable=False)
+    date_created = db.Column(db.DateTime, default=datetime.utcnow)
+    total_amount = db.Column(db.Float, nullable=False)  # Define total_amount attribute
+    items = db.relationship('InvoiceItem', backref='invoice', lazy=True)
+
+
+
+class InvoiceItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    product_code = db.Column(db.String(64), db.ForeignKey('product.code'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('invoice.id'), nullable=False)
+    product = db.relationship('Product')

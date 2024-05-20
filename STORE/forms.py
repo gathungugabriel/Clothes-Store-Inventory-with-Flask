@@ -10,7 +10,6 @@ class ProductForm(FlaskForm):
     color = StringField('Color', validators=[DataRequired()])
     description = TextAreaField('Description', validators=[DataRequired()])
     price = FloatField('Price', validators=[DataRequired(), NumberRange(min=0)])
-    quantity = IntegerField('Quantity', validators=[DataRequired(), NumberRange(min=0)])
     submit = SubmitField('Submit')
 
 class LoginForm(FlaskForm):

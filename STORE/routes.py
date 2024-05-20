@@ -1,8 +1,10 @@
+# routes.py
+
 from flask import render_template, redirect, url_for, flash, jsonify, request
 from flask_login import login_user, logout_user, current_user, login_required
 from . import app, db
 from .forms import LoginForm, RegistrationForm, ProductForm
-from .models import User, Product, Sale
+from .models import User, Product, Sale, Invoice, InvoiceItem
 from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
@@ -44,51 +46,26 @@ def logout():
 @app.route('/')
 def initial():
     if current_user.is_authenticated:
-        return redirect(url_for('login'))
+        return redirect(url_for('index'))
     return render_template('initial.html')
 
 @app.route('/index')
 @login_required
 def index():
-    # Fetch all products and group them by all features besides code, description, and color
-    products = db.session.query(
-        Product.item,
-        Product.type_material,
-        Product.size,
-        Product.price,
-        func.sum(Product.quantity).label('total_quantity')
-    ).group_by(
-        Product.item,
-        Product.type_material,
-        Product.size,
-        Product.price,
-        
-    ).all()
+    # Query all products
+    all_products = Product.query.all()
 
-    # Calculate total quantity by summing up the quantities of all products
-    total_quantity = sum(product.total_quantity for product in products)
+    # Query all sold product codes
+    sold_product_codes = [sale.product_code for sale in Sale.query.all()]
 
-    return render_template('index.html', products=products, total_quantity=total_quantity)
+    # Filter out sold products
+    unsold_products = [product for product in all_products if product.code not in sold_product_codes]
 
-# @app.route('/expand_items/<string:item>', methods=['GET'])
-# @login_required
-# def expand_items(item):
-#     # Query products with similar features
-#     products = Product.query.filter_by(item=item).all()
+    return render_template('index.html', products=unsold_products)
 
-#     # Prepare list of product data
-#     product_data = []
-#     for product in products:
-#         product_data.append({
-#             'code': product.code,
-#             'description': product.description
-#         })
 
-#     # Print fetched data for debugging
-#     print("Fetched data:", product_data)
+    
 
-#     # Return JSON response
-#     return jsonify(product_data)
 @app.route('/expand_items', methods=['POST'])
 @login_required
 def expand_items():
@@ -123,8 +100,6 @@ def expand_items():
 
     return jsonify(product_data)
 
-
-
 @app.route('/add_product', methods=['GET', 'POST'])
 @login_required
 def add_product():
@@ -141,8 +116,7 @@ def add_product():
             size=form.size.data,
             color=form.color.data,
             description=form.description.data,
-            price=form.price.data,
-            quantity=form.quantity.data
+            price=form.price.data
         )
         try:
             db.session.add(product)
@@ -176,22 +150,33 @@ def delete_product(code):
     flash('Product deleted successfully!', 'success')
     return redirect(url_for('index'))
 
-@app.route('/fetch_products')
-def fetch_products():
-    products = Product.query.all()
-    products_data = [{'id': product.id, 'code': product.code, 'item': product.item, 'type_material': product.type_material, 'size': product.size, 'color': product.color, 'description': product.description, 'price': product.price, 'quantity': product.quantity} for product in products]
-    return jsonify({'products': products_data})
-
 @app.route('/filter_products', methods=['POST'])
 @login_required
 def filter_products():
-    search_term = request.form.get('search_term', '').lower()
-    filtered_products = []
+    data = request.get_json()
+    search_term = data.get('search_term', '').lower()
 
-    if search_term:
-        filtered_products = [{'id': product.id, 'code': product.code, 'item': product.item, 'type_material': product.type_material, 'size': product.size, 'color': product.color, 'description': product.description, 'price': product.price, 'quantity': product.quantity} for product in Product.query.filter(Product.description.ilike(f'%{search_term}%'))]
+    filtered_products = Product.query.filter(
+        or_(
+            Product.item.ilike(f'%{search_term}%'),
+            Product.type_material.ilike(f'%{search_term}%'),
+            Product.size.ilike(f'%{search_term}%'),
+            Product.color.ilike(f'%{search_term}%'),
+            Product.description.ilike(f'%{search_term}%')
+        )
+    ).all()
 
-    return jsonify({'products': filtered_products})
+    filtered_products_data = [
+        {
+            'item': product.item,
+            'type_material': product.type_material,
+            'size': product.size,
+            'price': product.price
+        } 
+        for product in filtered_products
+    ]
+
+    return jsonify({'products': filtered_products_data})
 
 @app.route('/sales', methods=['GET', 'POST'])
 def sales():
@@ -223,18 +208,50 @@ def sales():
 @login_required
 def make_sale():
     if request.method == 'POST':
-        product_code = request.form.get('product_code')
-        quantity = request.form.get('quantity')
+        customer_name = request.form.get('customer_name')
+        customer_email = request.form.get('customer_email')
+        product_codes = request.form.getlist('product_code[]')
 
-        product = Product.query.filter_by(code=product_code).first_or_404()
-        if product.quantity >= int(quantity):
-            product.quantity -= int(quantity)
-            sale = Sale(product_code=product_code, quantity_sold=int(quantity))
+        total_sale_amount = 0
+
+        # Create a sale record for each product sold
+        for product_code in product_codes:
+            product = Product.query.filter_by(code=product_code).first_or_404()
+            sale = Sale(product_code=product_code, quantity_sold=1, sale_date=datetime.now())  # Default quantity_sold to 1
             db.session.add(sale)
-            db.session.commit()
-            flash('Sale recorded successfully!', 'success')
-            return redirect(url_for('index'))
-        else:
-            flash('Not enough stock available for sale!', 'danger')
+            total_sale_amount += product.price
+
+        # Create an invoice for the sale
+        invoice = Invoice(customer_name=customer_name, customer_email=customer_email, total_amount=total_sale_amount)
+        db.session.add(invoice)
+        db.session.commit()  # Commit to get the invoice ID
+
+        # Record the sale in the invoice items
+        for product_code in product_codes:
+            invoice_item = InvoiceItem(product_code=product_code, quantity=1, invoice_id=invoice.id)
+            db.session.add(invoice_item)
+
+            # Deduct sold products from the Product table
+            product = Product.query.filter_by(code=product_code).first_or_404()
+            product.quantity -= 1
+
+        db.session.commit()
+        flash('Sale and invoice recorded successfully!', 'success')
+        return redirect(url_for('index'))
 
     return render_template('make_sales.html')
+
+
+@app.route('/invoice/<int:invoice_id>')
+@login_required
+def invoice(invoice_id):
+    invoice = Invoice.query.get_or_404(invoice_id)
+    return render_template('invoice.html', invoice=invoice)
+
+@app.route('/get_product_details/<code>', methods=['GET'])
+def get_product_details(code):
+    product = Product.query.filter_by(code=code).first()
+    if product:
+        return jsonify(product.serialize())
+    else:
+        return jsonify({'error': 'Product not found'}), 404
