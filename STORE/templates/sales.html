@@ -8,11 +8,11 @@
     <form action="{{ url_for('sales') }}" method="GET">
         <div class="mb-3">
             <label for="start_date">Start Date:</label>
-            <input type="date" id="start_date" name="start_date">
+            <input type="date" id="start_date" name="start_date" value="{{ request.args.get('start_date') }}">
         </div>
         <div class="mb-3">
             <label for="end_date">End Date:</label>
-            <input type="date" id="end_date" name="end_date">
+            <input type="date" id="end_date" name="end_date" value="{{ request.args.get('end_date') }}">
         </div>
         <div class="mb-3">
             <label for="product">Product:</label>
@@ -20,7 +20,9 @@
                 <option value="">All Products</option>
                 <!-- Populate options dynamically with products from the database -->
                 {% for product in products %}
-                <option value="{{ product.id }}">{{ product.item }}</option>
+                <option value="{{ product.code }}" {% if product.code in request.args.getlist('product') %}selected{% endif %}>
+                    {{ product.item }}
+                </option>
                 {% endfor %}
             </select>
         </div>
@@ -29,16 +31,11 @@
 
     <!-- Display sales data -->
     <div class="table-responsive">
-        <!-- Table to display filtered sales data -->
-        <!-- Modify as needed -->
-    </div>
-
-    <!-- Display sales data -->
-    <div class="table-responsive">
         <table class="table table-bordered">
             <thead>
                 <tr>
                     <th>ID</th>
+                    <th>Product Code</th>
                     <th>Product</th>
                     <th>Quantity Sold</th>
                     <th>Price per Unit</th>
@@ -50,11 +47,12 @@
                 {% for sale in sales %}
                 <tr>
                     <td>{{ sale.id }}</td>
+                    <td>{{ sale.product_code }}</td> <!-- Added Product Code -->
                     <td>{{ sale.product.item }}</td>
                     <td>{{ sale.quantity_sold }}</td>
                     <td>${{ sale.product.price }}</td>
                     <td>${{ sale.quantity_sold * sale.product.price }}</td>
-                    <td>{{ sale.sale_date }}</td>
+                    <td>{{ sale.sale_date.strftime('%Y-%m-%d') }}</td> <!-- Ensure proper date formatting -->
                 </tr>
                 {% endfor %}
             </tbody>

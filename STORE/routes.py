@@ -78,12 +78,13 @@ def expand_items():
     if not all([item, type_material, size, price]):
         return jsonify({'error': 'Invalid parameters'}), 400
 
+    # Query products with available quantities
     products = Product.query.filter_by(
         item=item,
         type_material=type_material,
         size=size,
         price=price
-    ).all()
+    ).filter(Product.quantity > 0).all()  # Filter only products with available quantities
 
     product_data = [
         {
@@ -93,7 +94,8 @@ def expand_items():
             'size': product.size,
             'color': product.color,
             'description': product.description,
-            'price': product.price
+            'price': product.price,
+            'quantity': product.quantity  # Include quantity in product data
         } 
         for product in products
     ]
@@ -150,6 +152,7 @@ def delete_product(code):
     flash('Product deleted successfully!', 'success')
     return redirect(url_for('index'))
 
+
 @app.route('/filter_products', methods=['POST'])
 @login_required
 def filter_products():
@@ -178,7 +181,9 @@ def filter_products():
 
     return jsonify({'products': filtered_products_data})
 
+
 @app.route('/sales', methods=['GET', 'POST'])
+@login_required
 def sales():
     sales_query = Sale.query.join(Product)
 
@@ -194,15 +199,15 @@ def sales():
         end_date = datetime.strptime(end_date, '%Y-%m-%d')
         sales_query = sales_query.filter(Sale.sale_date <= end_date)
 
-    if product_codes:
-        product_filters = [Sale.product_code == code for code in product_codes]
-        sales_query = sales_query.filter(or_(*product_filters))
+    if product_codes and product_codes != ['']:
+        sales_query = sales_query.filter(Sale.product_code.in_(product_codes))
 
     sales = sales_query.all()
     products = Product.query.all()
     total_sales_amount = sum(sale.quantity_sold * sale.product.price for sale in sales)
 
     return render_template('sales.html', sales=sales, total_sales_amount=total_sales_amount, products=products)
+
 
 @app.route('/make_sale', methods=['GET', 'POST'])
 @login_required
@@ -217,12 +222,17 @@ def make_sale():
         # Create a sale record for each product sold
         for product_code in product_codes:
             product = Product.query.filter_by(code=product_code).first_or_404()
-            sale = Sale(product_code=product_code, quantity_sold=1, sale_date=datetime.now())  # Default quantity_sold to 1
+            sale = Sale(product_code=product_code, quantity_sold=1, sale_date=datetime.now())
             db.session.add(sale)
             total_sale_amount += product.price
 
         # Create an invoice for the sale
-        invoice = Invoice(customer_name=customer_name, customer_email=customer_email, total_amount=total_sale_amount)
+        invoice = Invoice(
+            customer_name=customer_name,
+            customer_email=customer_email,
+            total_amount=total_sale_amount,
+            date_created=datetime.now()  # Ensure date is set correctly
+        )
         db.session.add(invoice)
         db.session.commit()  # Commit to get the invoice ID
 
@@ -237,7 +247,7 @@ def make_sale():
 
         db.session.commit()
         flash('Sale and invoice recorded successfully!', 'success')
-        return redirect(url_for('index'))
+        return redirect(url_for('print_invoice', invoice_id=invoice.id))
 
     return render_template('make_sales.html')
 
@@ -255,3 +265,9 @@ def get_product_details(code):
         return jsonify(product.serialize())
     else:
         return jsonify({'error': 'Product not found'}), 404
+
+@app.route('/invoice/<int:invoice_id>/print', methods=['GET'])
+@login_required
+def print_invoice(invoice_id):
+    invoice = Invoice.query.get_or_404(invoice_id)
+    return render_template('print_invoice.html', invoice=invoice)
