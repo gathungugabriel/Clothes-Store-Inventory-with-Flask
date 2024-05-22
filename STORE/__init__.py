@@ -9,8 +9,8 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key_here'
 
 # Configure SQLite database
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///C:\\Users\\gabriel.githinji\\Desktop\\tests\\Clothes-Store-Inventory-with-Flask\\instance\\your_database.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///C:\\Users\\Gabriel\\Desktop\\coding\\Clothes-Store-Inventory-with-Flask\\instance\\your_database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///C:\\Users\\gabriel.githinji\\Desktop\\tests\\Clothes-Store-Inventory-with-Flask\\instance\\your_database.db'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///C:\\Users\\Gabriel\\Desktop\\coding\\Clothes-Store-Inventory-with-Flask\\instance\\your_database.db'
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 

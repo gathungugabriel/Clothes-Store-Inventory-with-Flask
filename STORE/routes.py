@@ -1,5 +1,3 @@
-# routes.py
-
 from flask import render_template, redirect, url_for, flash, jsonify, request
 from flask_login import login_user, logout_user, current_user, login_required
 from . import app, db
@@ -18,6 +16,7 @@ def login():
         user = User.query.filter_by(username=form.username.data).first()
         if user and user.check_password(form.password.data):
             login_user(user)
+            flash('Login successful!', 'success')
             return redirect(url_for('index'))
         else:
             flash('Invalid username or password', 'warning')
@@ -27,20 +26,38 @@ def login():
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
+    
     form = RegistrationForm()
     if form.validate_on_submit():
-        user = User(username=form.username.data, email=form.email.data)
-        user.set_password(form.password.data)
-        db.session.add(user)
-        db.session.commit()
-        flash('Your account has been created! You can now log in.', 'success')
-        return redirect(url_for('login'))
+        username = form.username.data
+        email = form.email.data
+        password = form.password.data
+
+        user = User(username=username, email=email)
+        user.set_password(password)
+        
+        try:
+            db.session.add(user)
+            db.session.commit()
+            flash('Your account has been created! You can now log in.', 'success')
+            return redirect(url_for('login'))
+        except IntegrityError:
+            db.session.rollback()
+            flash('Username or email already exists. Please choose a different one.', 'danger')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'An error occurred: {str(e)}', 'danger')
+    else:
+        # Print form errors if validation fails
+        print(form.errors)
+    
     return render_template('register.html', form=form)
 
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
+    flash('You have been logged out.', 'info')
     return redirect(url_for('initial'))
 
 @app.route('/')
@@ -62,9 +79,6 @@ def index():
     unsold_products = [product for product in all_products if product.code not in sold_product_codes]
 
     return render_template('index.html', products=unsold_products)
-
-
-    
 
 @app.route('/expand_items', methods=['POST'])
 @login_required
@@ -152,7 +166,6 @@ def delete_product(code):
     flash('Product deleted successfully!', 'success')
     return redirect(url_for('index'))
 
-
 @app.route('/filter_products', methods=['POST'])
 @login_required
 def filter_products():
@@ -181,7 +194,6 @@ def filter_products():
 
     return jsonify({'products': filtered_products_data})
 
-
 @app.route('/sales', methods=['GET', 'POST'])
 @login_required
 def sales():
@@ -190,6 +202,7 @@ def sales():
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     product_codes = request.args.getlist('product')
+    entered_product_code = request.args.get('product_code')
 
     if start_date:
         start_date = datetime.strptime(start_date, '%Y-%m-%d')
@@ -202,12 +215,22 @@ def sales():
     if product_codes and product_codes != ['']:
         sales_query = sales_query.filter(Sale.product_code.in_(product_codes))
 
+    if entered_product_code:
+        sales_query = sales_query.filter(Sale.product_code == entered_product_code)
+
     sales = sales_query.all()
     products = Product.query.all()
     total_sales_amount = sum(sale.quantity_sold * sale.product.price for sale in sales)
 
-    return render_template('sales.html', sales=sales, total_sales_amount=total_sales_amount, products=products)
+    if sales:
+        flash_message = 'Sales filtered successfully!'
+    else:
+        flash_message = 'No sales found matching the criteria.'
 
+    # Ensure flash is called once outside conditional
+    flash(flash_message, 'success')
+
+    return render_template('sales.html', sales=sales, total_sales_amount=total_sales_amount, products=products)
 
 @app.route('/make_sale', methods=['GET', 'POST'])
 @login_required
@@ -219,44 +242,50 @@ def make_sale():
 
         total_sale_amount = 0
 
-        # Create a sale record for each product sold
-        for product_code in product_codes:
-            product = Product.query.filter_by(code=product_code).first_or_404()
-            sale = Sale(product_code=product_code, quantity_sold=1, sale_date=datetime.now())
-            db.session.add(sale)
-            total_sale_amount += product.price
+        try:
+            # Create a sale record for each product sold
+            for product_code in product_codes:
+                product = Product.query.filter_by(code=product_code).first_or_404()
+                if product.quantity <= 0:
+                    flash(f'Product {product.item} is out of stock.', 'danger')
+                    return redirect(url_for('make_sale'))
+                sale = Sale(product_code=product_code, quantity_sold=1, sale_date=datetime.now())
+                db.session.add(sale)
+                total_sale_amount += product.price
 
-        # Create an invoice for the sale
-        invoice = Invoice(
-            customer_name=customer_name,
-            customer_email=customer_email,
-            total_amount=total_sale_amount,
-            date_created=datetime.now()  # Ensure date is set correctly
-        )
-        db.session.add(invoice)
-        db.session.commit()  # Commit to get the invoice ID
+            # Create an invoice for the sale
+            invoice = Invoice(
+                customer_name=customer_name,
+                customer_email=customer_email,
+                total_amount=total_sale_amount,
+                date_created=datetime.now()  # Ensure date is set correctly
+            )
+            db.session.add(invoice)
+            db.session.commit()  # Commit to get the invoice ID
 
-        # Record the sale in the invoice items
-        for product_code in product_codes:
-            invoice_item = InvoiceItem(product_code=product_code, quantity=1, invoice_id=invoice.id)
-            db.session.add(invoice_item)
+            # Record the sale in the invoice items
+            for product_code in product_codes:
+                invoice_item = InvoiceItem(product_code=product_code, quantity=1, invoice_id=invoice.id)
+                db.session.add(invoice_item)
 
-            # Deduct sold products from the Product table
-            product = Product.query.filter_by(code=product_code).first_or_404()
-            product.quantity -= 1
+                # Deduct sold products from the Product table
+                product = Product.query.filter_by(code=product_code).first_or_404()
+                product.quantity -= 1
 
-        db.session.commit()
-        flash('Sale and invoice recorded successfully!', 'success')
-        return redirect(url_for('print_invoice', invoice_id=invoice.id))
+            db.session.commit()
+            flash('Sale and invoice recorded successfully!', 'success')
+            return redirect(url_for('print_invoice', invoice_id=invoice.id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'An error occurred while processing the sale: {str(e)}', 'danger')
 
     return render_template('make_sales.html')
 
-
-@app.route('/invoice/<int:invoice_id>')
+@app.route('/invoice/<int:invoice_id>/print', methods=['GET'])
 @login_required
-def invoice(invoice_id):
+def print_invoice(invoice_id):
     invoice = Invoice.query.get_or_404(invoice_id)
-    return render_template('invoice.html', invoice=invoice)
+    return render_template('print_invoice.html', invoice=invoice)
 
 @app.route('/get_product_details/<code>', methods=['GET'])
 def get_product_details(code):
@@ -266,8 +295,43 @@ def get_product_details(code):
     else:
         return jsonify({'error': 'Product not found'}), 404
 
-@app.route('/invoice/<int:invoice_id>/print', methods=['GET'])
+# Route to fetch and display all invoices
+@app.route('/invoices')
 @login_required
-def print_invoice(invoice_id):
-    invoice = Invoice.query.get_or_404(invoice_id)
-    return render_template('print_invoice.html', invoice=invoice)
+def invoices():
+    # Get search parameters from request
+    search_term = request.args.get('search_term')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    invoice_id = request.args.get('invoice_id')
+
+    # Query invoices based on search parameters
+    query = Invoice.query
+
+    if search_term:
+        query = query.filter(
+            or_(
+                Invoice.customer_name.ilike(f'%{search_term}%'),
+                Invoice.customer_email.ilike(f'%{search_term}%')
+            )
+        )
+
+    if start_date:
+        start_date = datetime.strptime(start_date, '%Y-%m-%d')
+        query = query.filter(Invoice.date_created >= start_date)
+
+    if end_date:
+        end_date = datetime.strptime(end_date, '%Y-%m-%d')
+        query = query.filter(Invoice.date_created <= end_date)
+
+    if invoice_id:
+        query = query.filter(Invoice.id == invoice_id)
+
+    all_invoices = query.all()
+
+    if not all_invoices:
+        flash('No invoices found matching the criteria.', 'info')
+    else:
+        flash('Invoices filtered successfully!', 'success')
+
+    return render_template('all_invoices.html', invoices=all_invoices)

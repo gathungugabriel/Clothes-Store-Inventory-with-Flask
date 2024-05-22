@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/custom_table.css') }}">
 <div class="container">
     <h1 class="mt-4 mb-4">Sales</h1>
 
@@ -26,13 +27,17 @@
                 {% endfor %}
             </select>
         </div>
+        <div class="mb-3">
+            <label for="product_code">Product Code:</label>
+            <input type="text" id="product_code" name="product_code" value="{{ request.args.get('product_code') }}">
+        </div>
         <button type="submit" class="btn btn-primary">Apply Filters</button>
     </form>
 
     <!-- Display sales data -->
-    <div class="table-responsive">
-        <table class="table table-bordered">
-            <thead>
+    <div class="table-responsive" style="display: block; max-height: 300px; overflow-y: auto;">
+        <table class="table table-bordered custom-table">
+            <thead class="sticky-top">
                 <tr>
                     <th>ID</th>
                     <th>Product Code</th>
@@ -44,25 +49,33 @@
                 </tr>
             </thead>
             <tbody>
-                {% for sale in sales %}
-                <tr>
-                    <td>{{ sale.id }}</td>
-                    <td>{{ sale.product_code }}</td> <!-- Added Product Code -->
-                    <td>{{ sale.product.item }}</td>
-                    <td>{{ sale.quantity_sold }}</td>
-                    <td>${{ sale.product.price }}</td>
-                    <td>${{ sale.quantity_sold * sale.product.price }}</td>
-                    <td>{{ sale.sale_date.strftime('%Y-%m-%d') }}</td> <!-- Ensure proper date formatting -->
-                </tr>
-                {% endfor %}
+                {% if sales %}
+                    {% for sale in sales %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ sale.product_code }}</td>
+                        <td>{{ sale.product.item }}</td>
+                        <td>{{ sale.quantity_sold }}</td>
+                        <td>${{ sale.product.price }}</td>
+                        <td>${{ sale.quantity_sold * sale.product.price }}</td>
+                        <td>{{ sale.sale_date.strftime('%Y-%m-%d') }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center">No sales found.</td>
+                    </tr>
+                {% endif %}
             </tbody>
         </table>
     </div>
 
     <!-- Display total amounts -->
+    {% if sales %}
     <div>
         <h3>Total Amount from Sales:</h3>
         <p>${{ total_sales_amount }}</p>
     </div>
+    {% endif %}
 </div>
 {% endblock %}

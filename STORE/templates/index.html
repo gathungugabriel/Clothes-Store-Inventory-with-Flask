@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/custom_index.css') }}">
 <div class="row">
     <div class="col-md-3">
         <h3>Dashboard</h3>
@@ -11,6 +12,9 @@
         <form action="{{ url_for('sales') }}" method="post">
             <button type="submit" class="btn btn-primary mb-3">Sales</button>
         </form>
+        <div class="col-md-3">
+            <a href="{{ url_for('invoices') }}" class="btn btn-primary mb-3">Invoices</a>
+        </div>
     </div>
     <div class="col-md-9">
         <h1 class="mb-4">Product Inventory</h1>
@@ -18,9 +22,9 @@
             <input type="text" id="searchInput" class="form-control" placeholder="Search products...">
             <button class="btn btn-primary" type="button" id="searchButton">Search</button>
         </div>
-        <div id="productTableContainer">
+        <div class="table-responsive" style="display: block; max-height: 300px; overflow-y: auto;" id="productTableContainer" >
             <table class="table table-striped">
-                <thead>
+                <thead >
                     <tr>
                         <th scope="col">Item</th>
                         <th scope="col">Type/Material</th>
@@ -43,7 +47,9 @@
                                     data-item="{{ product.item }}"
                                     data-type-material="{{ product.type_material }}"
                                     data-size="{{ product.size }}"
-                                    data-price="{{ product.price }}">List</button>
+                                    data-price="{{ product.price }}">
+                                <img src="{{ url_for('static', filename='dropdown-list.ico') }}" alt="List" style="width: 20px;">
+                            </button>
                         </td>
                     </tr>
                     <tr id="items_{{ product.item.replace(' ', '_') }}" class="nested-table-container d-none">

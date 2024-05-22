@@ -156,3 +156,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // Attach event listeners to the toggle buttons
     attachToggleEventListeners();
 });
+
+// password visisbility
+const eyeHideIconUrl = "{{ url_for('static', filename='eye-password-hide.ico') }}";
+        const eyeUnhideIconUrl = "{{ url_for('static', filename='eye-password-unhide.ico') }}";
+
+        document.getElementById('togglePassword').addEventListener('click', function (e) {
+            const passwordField = document.getElementById('password');
+            const passwordIcon = document.getElementById('passwordIcon');
+            const isPasswordHidden = passwordField.getAttribute('type') === 'password';
+
+            // Toggle password field type
+            passwordField.setAttribute('type', isPasswordHidden ? 'text' : 'password');
+
+            // Toggle the icon
+            passwordIcon.src = isPasswordHidden ? eyeUnhideIconUrl : eyeHideIconUrl;
+
+            // Log the current state and URLs for debugging
+            console.log('Password field type before toggle:', passwordField.getAttribute('type'));
+            console.log('Using icon URL:', isPasswordHidden ? eyeUnhideIconUrl : eyeHideIconUrl);
+            console.log('Password field type after toggle:', passwordField.getAttribute('type'));
+        });
