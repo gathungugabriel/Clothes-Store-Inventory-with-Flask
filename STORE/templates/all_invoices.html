@@ -15,7 +15,7 @@
     <input type="text" id="invoice_id" name="invoice_id">
     <button type="submit">Search</button>
 </form>
-<div class="table-responsive" style="display: block; max-height: 300px; overflow-y: auto;">
+<div class="table-responsive" style="display: block; max-height: 650px; overflow-y: auto;">
 
 <table>
     <thead class="sticky-top">
@@ -25,8 +25,7 @@
             <th>Customer Email</th>
             <th>Date Created</th>
             <th>Total Amount</th>
-            <th>Action</th>  <!-- Add column for action -->
-            <!-- Add more columns if needed -->
+            <th>Action</th>  
         </tr>
     </thead>
     <tbody>
@@ -42,7 +41,6 @@
                     <button type="submit">Preview</button>
                 </form>
             </td>
-            <!-- Add more columns if needed -->
         </tr>
         {% endfor %}
     </tbody>

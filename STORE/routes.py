@@ -1,11 +1,15 @@
 from flask import render_template, redirect, url_for, flash, jsonify, request
 from flask_login import login_user, logout_user, current_user, login_required
-from . import app, db
+from . import app, db, mail
 from .forms import LoginForm, RegistrationForm, ProductForm
 from .models import User, Product, Sale, Invoice, InvoiceItem
 from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
+from .utils import send_whatsapp_message
+from flask_mail import Message
+from weasyprint import HTML
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -194,6 +198,9 @@ def filter_products():
 
     return jsonify({'products': filtered_products_data})
 
+import logging
+from flask import current_app
+
 @app.route('/sales', methods=['GET', 'POST'])
 @login_required
 def sales():
@@ -203,6 +210,8 @@ def sales():
     end_date = request.args.get('end_date')
     product_codes = request.args.getlist('product')
     entered_product_code = request.args.get('product_code')
+
+    current_app.logger.info(f"start_date: {start_date}, end_date: {end_date}, product_codes: {product_codes}, entered_product_code: {entered_product_code}")
 
     if start_date:
         start_date = datetime.strptime(start_date, '%Y-%m-%d')
@@ -221,6 +230,9 @@ def sales():
     sales = sales_query.all()
     products = Product.query.all()
     total_sales_amount = sum(sale.quantity_sold * sale.product.price for sale in sales)
+
+    current_app.logger.info(f"Total sales found: {len(sales)}")
+    current_app.logger.info(f"Total sales amount: {total_sales_amount}")
 
     if sales:
         flash_message = 'Sales filtered successfully!'
@@ -274,12 +286,37 @@ def make_sale():
 
             db.session.commit()
             flash('Sale and invoice recorded successfully!', 'success')
+
+            # Generate PDF
+            pdf = generate_invoice_pdf(invoice)
+
+            # Send Email
+            send_invoice_email(customer_email, pdf)
+
+            # Send WhatsApp notification
+            send_whatsapp_message(invoice.id, customer_name, total_sale_amount)
+            flash('WhatsApp notification sent!', 'success')
+
             return redirect(url_for('print_invoice', invoice_id=invoice.id))
         except Exception as e:
             db.session.rollback()
             flash(f'An error occurred while processing the sale: {str(e)}', 'danger')
 
     return render_template('make_sales.html')
+
+def generate_invoice_pdf(invoice):
+    rendered = render_template('invoice_template.html', invoice=invoice)
+    pdf = HTML(string=rendered).write_pdf()
+    return pdf
+
+def send_invoice_email(email, pdf):
+    msg = Message('Invoice', recipients=[email])
+    msg.body = 'Please find the attached invoice.'
+    msg.attach('invoice.pdf', 'application/pdf', pdf)
+    mail.send(msg)
+
+
+
 
 @app.route('/invoice/<int:invoice_id>/print', methods=['GET'])
 @login_required
@@ -335,3 +372,28 @@ def invoices():
         flash('Invoices filtered successfully!', 'success')
 
     return render_template('all_invoices.html', invoices=all_invoices)
+
+
+@app.route('/generate_invoice', methods=['GET', 'POST'])
+def generate_invoice():
+    if request.method == 'POST':
+        customer_name = request.form['customer_name']
+        total_amount = request.form['total_amount']
+        new_invoice = Invoice(customer_name=customer_name, total_amount=total_amount)
+        db.session.add(new_invoice)
+        db.session.commit()
+
+        # Send WhatsApp message
+        send_whatsapp_message(new_invoice.id, customer_name, total_amount)
+
+        flash('Invoice generated and WhatsApp notification sent!', 'success')
+        return redirect(url_for('index'))
+
+    # Handle GET requests
+    return render_template('make_sales.html')
+
+def send_invoice_email(email, invoice):
+    msg = Message('Invoice', recipients=[email])
+    msg.body = render_template('emails/invoice_email_template.txt', invoice=invoice)
+    msg.html = render_template('emails/invoice_email_template.html', invoice=invoice)
+    mail.send(msg)
