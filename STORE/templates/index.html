@@ -22,9 +22,12 @@
             <input type="text" id="searchInput" class="form-control" placeholder="Search products...">
             <button class="btn btn-primary" type="button" id="searchButton">Search</button>
         </div>
-        <div class="table-responsive" style="display: block; max-height: 650px; overflow-y: auto;" id="productTableContainer" >
+        <div class="input-group mb-3">
+            <input type="text" id="barcodeInput" class="form-control" placeholder="Scan product barcode..." autofocus>
+        </div>
+        <div class="table-responsive" style="display: block; max-height: 650px; overflow-y: auto;" id="productTableContainer">
             <table class="table table-striped">
-                <thead >
+                <thead>
                     <tr>
                         <th scope="col">Item</th>
                         <th scope="col">Type/Material</th>
@@ -40,7 +43,7 @@
                         <td>{{ product.item }}</td>
                         <td>{{ product.type_material }}</td>
                         <td>{{ product.size }}</td>
-                        <td>${{ product.price }}</td>
+                        <td>KSh {{ product.price }}</td>
                         <td>{{ product.total_quantity }}</td>
                         <td>
                             <button class="btn btn-info toggle-button" 
@@ -50,6 +53,10 @@
                                     data-price="{{ product.price }}">
                                 <img src="{{ url_for('static', filename='dropdown-list.ico') }}" alt="List" style="width: 20px;">
                             </button>
+                            <a href="{{ url_for('update_product', code=product.code) }}" class="btn btn-warning btn-sm">Update</a>
+                            <form action="{{ url_for('delete_product', code=product.code) }}" method="post" style="display:inline;">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
                         </td>
                     </tr>
                     <tr id="items_{{ product.item.replace(' ', '_') }}" class="nested-table-container d-none">

@@ -26,14 +26,14 @@
                 <td>{{ item.product_code }}</td>
                 <td>{{ item.product.item }}</td>
                 <td>{{ item.quantity }}</td>
-                <td>${{ item.product.price }}</td>
+                <td>KSh {{ item.product.price }}</td>
             </tr>
             {% endfor %}
         </tbody>
         <tfoot>
             <tr>
                 <td colspan="3" class="total-amount">Total Amount:</td>
-                <td>${{ invoice.total_amount }}</td>
+                <td>KSh {{ invoice.total_amount }}</td>
             </tr>
         </tfoot>
     </table>

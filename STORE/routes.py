@@ -1,16 +1,41 @@
 from flask import render_template, redirect, url_for, flash, jsonify, request
 from flask_login import login_user, logout_user, current_user, login_required
-from . import app, db, mail
+from . import app, db
 from .forms import LoginForm, RegistrationForm, ProductForm
 from .models import User, Product, Sale, Invoice, InvoiceItem
 from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
-from .utils import send_whatsapp_message
-from flask_mail import Message
-from weasyprint import HTML
+# from weasyprint import HTML
 
+# Define routes and views
+@app.route('/handle_barcode/<barcode>', methods=['GET'])
+@login_required
+def handle_barcode(barcode):
+    product = Product.query.filter_by(code=barcode).first()
 
+    if not product:
+        return jsonify({'error': 'Product not found'}), 404
+
+    # Determine action based on some condition
+    action = request.args.get('action', 'filter')
+
+    if action == 'add':
+        # Handle product addition
+        # Add your logic for adding the product here
+        return jsonify({'action': 'add', 'product': product.serialize()})
+    elif action == 'delete':
+        # Handle product deletion
+        db.session.delete(product)
+        db.session.commit()
+        return jsonify({'action': 'delete', 'product': product.serialize()})
+    elif action == 'filter':
+        # Handle product filtering
+        return jsonify({'action': 'filter', 'product': product.serialize()})
+    else:
+        return jsonify({'error': 'Invalid action'}), 400
+
+# Other routes and views
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -52,7 +77,6 @@ def register():
             db.session.rollback()
             flash(f'An error occurred: {str(e)}', 'danger')
     else:
-        # Print form errors if validation fails
         print(form.errors)
     
     return render_template('register.html', form=form)
@@ -73,15 +97,9 @@ def initial():
 @app.route('/index')
 @login_required
 def index():
-    # Query all products
     all_products = Product.query.all()
-
-    # Query all sold product codes
     sold_product_codes = [sale.product_code for sale in Sale.query.all()]
-
-    # Filter out sold products
     unsold_products = [product for product in all_products if product.code not in sold_product_codes]
-
     return render_template('index.html', products=unsold_products)
 
 @app.route('/expand_items', methods=['POST'])
@@ -96,13 +114,12 @@ def expand_items():
     if not all([item, type_material, size, price]):
         return jsonify({'error': 'Invalid parameters'}), 400
 
-    # Query products with available quantities
     products = Product.query.filter_by(
         item=item,
         type_material=type_material,
         size=size,
         price=price
-    ).filter(Product.quantity > 0).all()  # Filter only products with available quantities
+    ).filter(Product.quantity > 0).all()
 
     product_data = [
         {
@@ -113,7 +130,7 @@ def expand_items():
             'color': product.color,
             'description': product.description,
             'price': product.price,
-            'quantity': product.quantity  # Include quantity in product data
+            'quantity': product.quantity
         } 
         for product in products
     ]
@@ -198,9 +215,6 @@ def filter_products():
 
     return jsonify({'products': filtered_products_data})
 
-import logging
-from flask import current_app
-
 @app.route('/sales', methods=['GET', 'POST'])
 @login_required
 def sales():
@@ -211,7 +225,8 @@ def sales():
     product_codes = request.args.getlist('product')
     entered_product_code = request.args.get('product_code')
 
-    current_app.logger.info(f"start_date: {start_date}, end_date: {end_date}, product_codes: {product_codes}, entered_product_code: {entered_product_code}")
+    # Check if any filtering criteria are present
+    filtering_criteria_present = start_date or end_date or product_codes or entered_product_code
 
     if start_date:
         start_date = datetime.strptime(start_date, '%Y-%m-%d')
@@ -231,18 +246,14 @@ def sales():
     products = Product.query.all()
     total_sales_amount = sum(sale.quantity_sold * sale.product.price for sale in sales)
 
-    current_app.logger.info(f"Total sales found: {len(sales)}")
-    current_app.logger.info(f"Total sales amount: {total_sales_amount}")
-
-    if sales:
-        flash_message = 'Sales filtered successfully!'
-    else:
-        flash_message = 'No sales found matching the criteria.'
-
-    # Ensure flash is called once outside conditional
-    flash(flash_message, 'success')
+    if filtering_criteria_present:
+        if sales:
+            flash('Sales filtered successfully!', 'success')
+        else:
+            flash('No sales found matching the criteria.', 'warning')
 
     return render_template('sales.html', sales=sales, total_sales_amount=total_sales_amount, products=products)
+
 
 @app.route('/make_sale', methods=['GET', 'POST'])
 @login_required
@@ -255,7 +266,6 @@ def make_sale():
         total_sale_amount = 0
 
         try:
-            # Create a sale record for each product sold
             for product_code in product_codes:
                 product = Product.query.filter_by(code=product_code).first_or_404()
                 if product.quantity <= 0:
@@ -265,38 +275,26 @@ def make_sale():
                 db.session.add(sale)
                 total_sale_amount += product.price
 
-            # Create an invoice for the sale
             invoice = Invoice(
                 customer_name=customer_name,
                 customer_email=customer_email,
                 total_amount=total_sale_amount,
-                date_created=datetime.now()  # Ensure date is set correctly
+                date_created=datetime.now()
             )
             db.session.add(invoice)
-            db.session.commit()  # Commit to get the invoice ID
+            db.session.commit()
 
-            # Record the sale in the invoice items
             for product_code in product_codes:
                 invoice_item = InvoiceItem(product_code=product_code, quantity=1, invoice_id=invoice.id)
                 db.session.add(invoice_item)
 
-                # Deduct sold products from the Product table
                 product = Product.query.filter_by(code=product_code).first_or_404()
                 product.quantity -= 1
 
             db.session.commit()
             flash('Sale and invoice recorded successfully!', 'success')
 
-            # Generate PDF
             pdf = generate_invoice_pdf(invoice)
-
-            # Send Email
-            send_invoice_email(customer_email, pdf)
-
-            # Send WhatsApp notification
-            send_whatsapp_message(invoice.id, customer_name, total_sale_amount)
-            flash('WhatsApp notification sent!', 'success')
-
             return redirect(url_for('print_invoice', invoice_id=invoice.id))
         except Exception as e:
             db.session.rollback()
@@ -305,18 +303,66 @@ def make_sale():
     return render_template('make_sales.html')
 
 def generate_invoice_pdf(invoice):
-    rendered = render_template('invoice_template.html', invoice=invoice)
-    pdf = HTML(string=rendered).write_pdf()
-    return pdf
+    html_content = f'''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <title>Invoice</title>
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                margin: 40px;
+            }}
+            .title {{
+                text-align: center;
+                font-size: 24px;
+                margin-bottom: 20px;
+            }}
+            .customer-details, .total-amount {{
+                margin-bottom: 10px;
+                font-size: 14px;
+            }}
+            .invoice-items {{
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+            }}
+            .invoice-items th, .invoice-items td {{
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }}
+            .invoice-items th {{
+                background-color: #f2f2f2;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="title">Invoice</div>
+        <div class="customer-details">Customer: {invoice.customer_name}</div>
+        <div class="customer-details">Email: {invoice.customer_email}</div>
+        <div class="total-amount">Total Amount: ${invoice.total_amount}</div>
+        
+        <table class="invoice-items">
+            <thead>
+                <tr>
+                    <th>Product Code</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                {''.join([f'<tr><td>{item.product_code}</td><td>{item.quantity}</td><td>{item.product.price}</td></tr>' for item in invoice.items])}
+            </tbody>
+        </table>
+    </body>
+    </html>
+    '''
 
-def send_invoice_email(email, pdf):
-    msg = Message('Invoice', recipients=[email])
-    msg.body = 'Please find the attached invoice.'
-    msg.attach('invoice.pdf', 'application/pdf', pdf)
-    mail.send(msg)
-
-
-
+    pdf_file_path = f"invoice_{invoice.id}.pdf"
+    HTML(string=html_content).write_pdf(pdf_file_path)
+    return pdf_file_path
 
 @app.route('/invoice/<int:invoice_id>/print', methods=['GET'])
 @login_required
@@ -332,8 +378,7 @@ def get_product_details(code):
     else:
         return jsonify({'error': 'Product not found'}), 404
 
-# Route to fetch and display all invoices
-@app.route('/invoices')
+@app.route('/invoices', methods=['GET'])
 @login_required
 def invoices():
     # Get search parameters from request
@@ -341,6 +386,9 @@ def invoices():
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     invoice_id = request.args.get('invoice_id')
+
+    # Check if any filtering criteria are present
+    filtering_criteria_present = search_term or start_date or end_date or invoice_id
 
     # Query invoices based on search parameters
     query = Invoice.query
@@ -366,10 +414,12 @@ def invoices():
 
     all_invoices = query.all()
 
-    if not all_invoices:
-        flash('No invoices found matching the criteria.', 'info')
-    else:
-        flash('Invoices filtered successfully!', 'success')
+    # Only flash messages if filtering criteria are present
+    if filtering_criteria_present:
+        if all_invoices:
+            flash('Invoices filtered successfully!', 'success')
+        else:
+            flash('No invoices found matching the criteria.', 'warning')
 
     return render_template('all_invoices.html', invoices=all_invoices)
 
@@ -383,17 +433,7 @@ def generate_invoice():
         db.session.add(new_invoice)
         db.session.commit()
 
-        # Send WhatsApp message
-        send_whatsapp_message(new_invoice.id, customer_name, total_amount)
-
-        flash('Invoice generated and WhatsApp notification sent!', 'success')
+        flash('Invoice generated successfully!', 'success')
         return redirect(url_for('index'))
 
-    # Handle GET requests
     return render_template('make_sales.html')
-
-def send_invoice_email(email, invoice):
-    msg = Message('Invoice', recipients=[email])
-    msg.body = render_template('emails/invoice_email_template.txt', invoice=invoice)
-    msg.html = render_template('emails/invoice_email_template.html', invoice=invoice)
-    mail.send(msg)

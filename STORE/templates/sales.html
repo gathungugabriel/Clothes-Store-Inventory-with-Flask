@@ -2,6 +2,7 @@
 
 {% block content %}
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/custom_table.css') }}">
+
 <div class="container">
     <h1 class="mt-4 mb-4">Sales</h1>
 
@@ -29,7 +30,7 @@
         </div>
         <div class="mb-3">
             <label for="product_code">Product Code:</label>
-            <input type="text" id="product_code" name="product_code" value="{{ request.args.get('product_code') }}">
+            <input type="text" id="product_code" name="product_code" value="{{ request.args.get('product_code') if request.args.get('product_code') else '' }}">
         </div>
         <button type="submit" class="btn btn-primary">Apply Filters</button>
     </form>
@@ -56,8 +57,8 @@
                         <td>{{ sale.product_code }}</td>
                         <td>{{ sale.product.item }}</td>
                         <td>{{ sale.quantity_sold }}</td>
-                        <td>${{ sale.product.price }}</td>
-                        <td>${{ sale.quantity_sold * sale.product.price }}</td>
+                        <td>KSh {{ sale.product.price }}</td>
+                        <td>KSh {{ sale.quantity_sold * sale.product.price }}</td>
                         <td>{{ sale.sale_date.strftime('%Y-%m-%d') }}</td>
                     </tr>
                     {% endfor %}
@@ -74,7 +75,7 @@
     {% if sales %}
     <div>
         <h3>Total Amount from Sales:</h3>
-        <p>${{ total_sales_amount }}</p>
+        <p>KSh {{ total_sales_amount }}</p>
     </div>
     {% endif %}
 </div>

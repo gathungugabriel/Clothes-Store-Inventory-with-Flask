@@ -1,6 +1,15 @@
 // search.js
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Auto-dismiss flash messages after 3 seconds
+    setTimeout(function() {
+        var flashMessages = document.querySelectorAll('.flash-message');
+        flashMessages.forEach(function(message) {
+            var alert = new bootstrap.Alert(message);
+            alert.close();
+        });
+    }, 2000);
+
     // Function to update the product table with filtered results
     function displayFilteredResults(filteredData) {
         const productTableBody = document.getElementById('productTableBody');
@@ -23,6 +32,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 data-type-material="${product.type_material}"
                                 data-size="${product.size}"
                                 data-price="${product.price}">List</button>
+                        <a href="/update_product/${product.code}" class="btn btn-warning btn-sm">Update</a>
+                        <form action="/delete_product/${product.code}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
                     </td>
                 </tr>
                 <tr id="items_${product.item.replace(/\s+/g, '_')}" class="nested-table-container d-none">
@@ -74,6 +87,39 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error filtering products:', error);
             // Handle error
         });
+    });
+
+    // Add event listener for the barcode input field
+    document.getElementById('barcodeInput').addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            const barcode = event.target.value.trim();
+            event.target.value = '';
+
+            // Send AJAX request to the server with the barcode
+            fetch(`/handle_barcode/${barcode}`, {
+                method: 'GET'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.action === 'add') {
+                    alert(`Product ${data.product.item} added successfully.`);
+                } else if (data.action === 'delete') {
+                    alert(`Product ${data.product.item} deleted successfully.`);
+                } else if (data.action === 'filter') {
+                    displayFilteredResults([data.product]);
+                }
+            })
+            .catch(error => {
+                console.error('Error handling barcode:', error);
+                alert('Error handling barcode.');
+            });
+        }
     });
 
     // Function to attach event listeners to the toggle buttons
@@ -156,24 +202,3 @@ document.addEventListener('DOMContentLoaded', function() {
     // Attach event listeners to the toggle buttons
     attachToggleEventListeners();
 });
-
-// password visisbility
-const eyeHideIconUrl = "{{ url_for('static', filename='eye-password-hide.ico') }}";
-        const eyeUnhideIconUrl = "{{ url_for('static', filename='eye-password-unhide.ico') }}";
-
-        document.getElementById('togglePassword').addEventListener('click', function (e) {
-            const passwordField = document.getElementById('password');
-            const passwordIcon = document.getElementById('passwordIcon');
-            const isPasswordHidden = passwordField.getAttribute('type') === 'password';
-
-            // Toggle password field type
-            passwordField.setAttribute('type', isPasswordHidden ? 'text' : 'password');
-
-            // Toggle the icon
-            passwordIcon.src = isPasswordHidden ? eyeUnhideIconUrl : eyeHideIconUrl;
-
-            // Log the current state and URLs for debugging
-            console.log('Password field type before toggle:', passwordField.getAttribute('type'));
-            console.log('Using icon URL:', isPasswordHidden ? eyeUnhideIconUrl : eyeHideIconUrl);
-            console.log('Password field type after toggle:', passwordField.getAttribute('type'));
-        });
