@@ -6,7 +6,10 @@ from .models import User, Product, Sale, Invoice, InvoiceItem
 from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
+from .utils import generate_tag, prefixes
+from add_data import add_products_from_csv
 # from weasyprint import HTML
+
 
 # Define routes and views
 @app.route('/handle_barcode/<barcode>', methods=['GET'])
@@ -35,7 +38,7 @@ def handle_barcode(barcode):
     else:
         return jsonify({'error': 'Invalid action'}), 400
 
-# Other routes and views
+# User authentication routes
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -102,6 +105,7 @@ def index():
     unsold_products = [product for product in all_products if product.code not in sold_product_codes]
     return render_template('index.html', products=unsold_products)
 
+# Product management routes
 @app.route('/expand_items', methods=['POST'])
 @login_required
 def expand_items():
@@ -137,25 +141,71 @@ def expand_items():
 
     return jsonify(product_data)
 
+@app.route('/grouped_products', methods=['GET'])
+@login_required
+
+def grouped_products():
+    products = Product.query.filter(Product.quantity > 0).all()
+    grouped_products = {}
+
+    for product in products:
+        category = product.category if product.category else 'Others'
+        if category not in grouped_products:
+            grouped_products[category] = []
+        grouped_products[category].append(product)
+
+    return jsonify(grouped_products)
+
+
 @app.route('/add_product', methods=['GET', 'POST'])
 @login_required
 def add_product():
     form = ProductForm()
     if form.validate_on_submit():
-        existing_product = Product.query.filter_by(code=form.code.data).first()
-        if existing_product:
-            flash('Product with this code already exists!', 'danger')
+        # Extract the code prefix
+        code_prefix = form.code.data.upper()
+
+        # Initialize item and category
+        item = None
+        category = None
+
+        # Determine the item and category from the code prefix
+        for item_key, prefix_data in prefixes.items():
+            if isinstance(prefix_data, dict):
+                for subcategory_key, prefix in prefix_data.items():
+                    if code_prefix.startswith(prefix):
+                        item = item_key
+                        category = subcategory_key
+                        break
+            else:
+                if code_prefix.startswith(prefix_data):
+                    item = item_key
+                    category = ""  # No subcategory for this item
+                    break
+
+        if not item:
+            # Handle invalid code prefix
+            flash('Invalid code prefix!', 'danger')
             return redirect(url_for('add_product'))
-        product = Product(
-            code=form.code.data,
-            item=form.item.data,
-            type_material=form.type_material.data,
-            size=form.size.data,
-            color=form.color.data,
-            description=form.description.data,
-            price=form.price.data
-        )
+
         try:
+            # Generate the tag
+            subcategory = category  # For readability
+            item_code = Product.query.filter_by(item=item, category=subcategory).count() + 1
+            product_code = generate_tag(item, subcategory, item_code)
+
+            product = Product(
+                code=product_code,
+                item=item,
+                category=subcategory,
+                type_material=form.type_material.data,
+                size=form.size.data,
+                color=form.color.data,
+                description=form.description.data,
+                buying_price=form.buying_price.data,
+                selling_price=form.selling_price.data
+            )
+
             db.session.add(product)
             db.session.commit()
             flash('Product added successfully!', 'success')
@@ -163,8 +213,13 @@ def add_product():
         except IntegrityError:
             flash('An error occurred while adding the product!', 'danger')
             db.session.rollback()
-            return redirect(url_for('add_product'))
+        except ValueError as e:
+            flash(f'Error: {str(e)}', 'danger')
+            db.session.rollback()
+    
     return render_template('add_product.html', form=form)
+
+
 
 @app.route('/update_product/<string:code>', methods=['GET', 'POST'])
 @login_required
@@ -173,6 +228,7 @@ def update_product(code):
     form = ProductForm(obj=product)
     if form.validate_on_submit():
         form.populate_obj(product)
+        product.profit = product.calculate_profit()
         db.session.commit()
         flash('Product updated successfully!', 'success')
         return redirect(url_for('index'))
@@ -215,6 +271,17 @@ def filter_products():
 
     return jsonify({'products': filtered_products_data})
 
+
+@app.route('/add_data_to_db')
+@login_required
+def add_data_to_db():
+    try:
+        add_products_from_csv('products.csv')  # Assuming your CSV file is named products.csv
+        return jsonify({'message': 'Data added to database successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Sales routes
 @app.route('/sales', methods=['GET', 'POST'])
 @login_required
 def sales():
@@ -253,7 +320,6 @@ def sales():
             flash('No sales found matching the criteria.', 'warning')
 
     return render_template('sales.html', sales=sales, total_sales_amount=total_sales_amount, products=products)
-
 
 @app.route('/make_sale', methods=['GET', 'POST'])
 @login_required

@@ -202,3 +202,50 @@ document.addEventListener('DOMContentLoaded', function() {
     // Attach event listeners to the toggle buttons
     attachToggleEventListeners();
 });
+
+document.addEventListener('DOMContentLoaded', function() {
+    const prefixes = {
+        'SC': { item: 'shirt', category: 'casual' },
+        'SO': { item: 'shirt', category: 'official' },
+        'TC': { item: 'trouser', category: 'casual' },
+        'TO': { item: 'trouser', category: 'official' },
+        'TSC': { item: 'tshirt', category: 'casual' },
+        'TSO': { item: 'tshirt', category: 'official' },
+        'SWC': { item: 'sweater', category: 'casual' },
+        'SWO': { item: 'sweater', category: 'official' },
+        'CC': { item: 'coat', category: 'casual' },
+        'CO': { item: 'coat', category: 'official' },
+        'SUC': { item: 'suit', category: 'casual' },
+        'SUO': { item: 'suit', category: 'official' },
+        'TIE': { item: 'tie', category: '' },
+        'BLT': { item: 'belt', category: '' },
+        'SHRT': { item: 'short', category: '' },
+        'SHC': { item: 'shoes', category: 'casual' },
+        'SHO': { item: 'shoes', category: 'official' },
+        'BX': { item: 'boxers', category: '' },
+        'VST': { item: 'vest', category: '' }
+    };
+
+    function autoFillItemAndCategory() {
+        const code = document.getElementById('code').value;
+        const prefix = code.match(/[A-Za-z]+/)[0];
+        if (prefixes[prefix]) {
+            document.getElementById('item').value = prefixes[prefix].item;
+            document.getElementById('category').value = prefixes[prefix].category;
+        } else {
+            document.getElementById('item').value = '';
+            document.getElementById('category').value = '';
+        }
+    }
+
+    function calculateProfit() {
+        const buyingPrice = parseFloat(document.getElementById('buying_price').value) || 0;
+        const sellingPrice = parseFloat(document.getElementById('selling_price').value) || 0;
+        const profit = sellingPrice - buyingPrice;
+        document.getElementById('profit').value = profit.toFixed(2);
+    }
+
+    document.getElementById('code').addEventListener('input', autoFillItemAndCategory);
+    document.getElementById('buying_price').addEventListener('input', calculateProfit);
+    document.getElementById('selling_price').addEventListener('input', calculateProfit);
+});

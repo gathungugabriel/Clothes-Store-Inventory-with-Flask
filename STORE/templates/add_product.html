@@ -10,11 +10,15 @@
                 {{ form.hidden_tag() }}
                 <div class="mb-3">
                     {{ form.code.label(class="form-label") }}
-                    {{ form.code(class="form-control") }}
+                    {{ form.code(class="form-control", id="code") }}
                 </div>
                 <div class="mb-3">
                     {{ form.item.label(class="form-label") }}
-                    {{ form.item(class="form-control") }}
+                    {{ form.item(class="form-control", id="item", readonly=True) }}
+                </div>
+                <div class="mb-3">
+                    {{ form.category.label(class="form-label") }}
+                    {{ form.category(class="form-control", id="category", readonly=True) }}
                 </div>
                 <div class="mb-3">
                     {{ form.type_material.label(class="form-label") }}
@@ -33,11 +37,21 @@
                     {{ form.description(class="form-control") }}
                 </div>
                 <div class="mb-3">
-                    {{ form.price.label(class="form-label") }}
-                    {{ form.price(class="form-control") }}
+                    {{ form.buying_price.label(class="form-label") }}
+                    {{ form.buying_price(class="form-control", id="buying_price") }}
+                </div>
+                <div class="mb-3">
+                    {{ form.selling_price.label(class="form-label") }}
+                    {{ form.selling_price(class="form-control", id="selling_price") }}
+                </div>
+                <div class="mb-3">
+                    {{ form.profit.label(class="form-label") }}
+                    {{ form.profit(class="form-control", id="profit", readonly=True) }}
                 </div>
                 <button type="submit" class="btn btn-primary">Add Product</button>
             </form>
         </div>
     </div>
+
+    <script src="{{ url_for('static', filename='js/add_product.js') }}"></script>
 {% endblock %}

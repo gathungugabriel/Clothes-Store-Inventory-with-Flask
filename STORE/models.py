@@ -20,33 +20,51 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
 class Product(db.Model):
-    code = db.Column(db.String(20), primary_key=True, unique=True, nullable=False, index=True)  # Index added to code column
+    code = db.Column(db.String(20), primary_key=True, unique=True, nullable=False, index=False)
     item = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(100), nullable=True)  # Add category field
     type_material = db.Column(db.String(100), nullable=False)
     size = db.Column(db.String(20), nullable=False)
     color = db.Column(db.String(50), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    price = db.Column(db.Float, nullable=False)
-    quantity = db.Column(db.Integer, nullable=False, default=1)  # Default quantity set to 1
-    sales = relationship('Sale', backref='product', lazy=True)  # Relationship with Sale model
+    buying_price = db.Column(db.Float, nullable=False)
+    selling_price = db.Column(db.Float, nullable=False)
+    profit = db.Column(db.Float, nullable=False, default=0)
+    quantity = db.Column(db.Integer, nullable=False, default=1)
+    sales = relationship('Sale', backref='product', lazy=True)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.profit = self.calculate_profit()
+
+    def calculate_profit(self):
+        return self.selling_price - self.buying_price
 
     def serialize(self):
         return {
             'code': self.code,
             'item': self.item,
+            'category': self.category,  # Include category in serialization
             'type_material': self.type_material,
             'size': self.size,
             'color': self.color,
             'description': self.description,
-            'price': self.price
+            'buying_price': self.buying_price,
+            'selling_price': self.selling_price,
+            'profit': self.profit
         }
 
     def __repr__(self):
-        return f"Product('{self.code}', '{self.item}', '{self.type_material}', '{self.size}', '{self.color}', '{self.description}', '{self.price}')"
+        return f"Product('{self.code}', '{self.item}', '{self.category}', '{self.type_material}', '{self.size}', '{self.color}', '{self.description}', '{self.buying_price}', '{self.selling_price}', '{self.profit}')"
+
+    def set_prices(self, buying_price, selling_price):
+        self.buying_price = buying_price
+        self.selling_price = selling_price
+        self.profit = self.calculate_profit()
 
 class Sale(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    product_code = db.Column(db.String(20), db.ForeignKey('product.code'), nullable=False)  # ForeignKey to product code
+    product_code = db.Column(db.String(20), db.ForeignKey('product.code'), nullable=False)
     quantity_sold = db.Column(db.Integer, nullable=False)
     sale_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
@@ -55,10 +73,8 @@ class Invoice(db.Model):
     customer_name = db.Column(db.String(128), nullable=False)
     customer_email = db.Column(db.String(128), nullable=False)
     date_created = db.Column(db.DateTime, default=datetime.utcnow)
-    total_amount = db.Column(db.Float, nullable=False)  # Define total_amount attribute
+    total_amount = db.Column(db.Float, nullable=False)
     items = db.relationship('InvoiceItem', backref='invoice', lazy=True)
-
-
 
 class InvoiceItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)

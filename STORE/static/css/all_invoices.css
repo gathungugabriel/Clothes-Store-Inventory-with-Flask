@@ -1,4 +1,3 @@
-
 body {
     font-family: Arial, sans-serif;
 }
@@ -51,8 +50,8 @@ table {
 thead.sticky-top th {
     position: sticky;
     top: 0;
-    background-color: rgba(20, 1, 1, 0.9);
-    color: azure;
+    background-color: #FFC300; /* Lighter Yellow */
+    color: #0A1931; /* Dark Blue */
     z-index: 1000;
 }
 
@@ -64,7 +63,8 @@ td {
 }
 
 th {
-    background-color: #f2f2f2;
+    background-color: #FFC300; /* Lighter Yellow */
+    color: #0A1931; /* Dark Blue */
 }
 
 tr:nth-child(even) {

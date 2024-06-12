@@ -25,6 +25,10 @@
         <div class="input-group mb-3">
             <input type="text" id="barcodeInput" class="form-control" placeholder="Scan product barcode..." autofocus>
         </div>
+        <!-- Add the button here -->
+        <div class="input-group mb-3">
+            <button id="addDataButton" class="btn btn-success">Add Data to Database</button>
+        </div>
         <div class="table-responsive" style="display: block; max-height: 650px; overflow-y: auto;" id="productTableContainer">
             <table class="table table-striped">
                 <thead>
@@ -72,4 +76,22 @@
     </div>
 </div>
 <script src="{{ url_for('static', filename='search.js') }}"></script>
+<script>
+    document.getElementById('addDataButton').addEventListener('click', function() {
+        fetch('/add_data_to_db')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                alert(data.message);
+            })
+            .catch(error => {
+                console.error('Error adding data to database:', error);
+                alert('Error adding data to database.');
+            });
+    });
+</script>
 {% endblock %}
