@@ -73,7 +73,7 @@ body {
 }
 
 .table tr:nth-child(even) {
-    background-color: #f2f2f2;
+    background-color: #be4d4d;
 }
 
 .table tr:hover {
@@ -96,8 +96,30 @@ body {
     width: 20px;
 }
 
-
 /* Alert message styles */
 .alert {
     margin-top: 20px;
+}
+
+/* Nested table container */
+.nested-table-container {
+    transition: transform 0.3s ease;
+}
+
+/* Nested table row styles */
+.nested-table-row:nth-child(even) {
+    background-color: #e9ecef;
+}
+
+.nested-table-row:nth-child(odd) {
+    background-color: #f8f9fa;
+}
+
+.nested-table-total {
+    background-color: #343a40;
+    color: #fff;
+}
+
+.nested-table-total td {
+    font-weight: bold;
 }

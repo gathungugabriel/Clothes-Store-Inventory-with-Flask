@@ -15,8 +15,8 @@ a {
 }
 
 .container {
-    background-color: #0A1931; /* Dark Blue Container */
-    color: #eeebe0; /* Lighter Yellow Text */
+    background-color: #2074f1; /* Dark Blue Container */
+    color: #dfb315; /* Lighter Yellow Text */
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -27,7 +27,7 @@ a {
 /* Header */
 .header {
     background-color: #FFC300; /* Lighter Yellow Header */
-    color: #0A1931; /* Dark Blue Text */
+    color: #a2b9dd; /* Dark Blue Text */
     padding: 20px;
     text-align: center;
 }

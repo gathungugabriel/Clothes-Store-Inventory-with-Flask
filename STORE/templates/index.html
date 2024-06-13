@@ -1,3 +1,4 @@
+<!-- index.html -->
 {% extends "base.html" %}
 
 {% block content %}
@@ -25,47 +26,39 @@
         <div class="input-group mb-3">
             <input type="text" id="barcodeInput" class="form-control" placeholder="Scan product barcode..." autofocus>
         </div>
-        <!-- Add the button here -->
         <div class="input-group mb-3">
             <button id="addDataButton" class="btn btn-success">Add Data to Database</button>
         </div>
-        <div class="table-responsive" style="display: block; max-height: 650px; overflow-y: auto;" id="productTableContainer">
+        <div class="table-responsive" id="productTableContainer">
             <table class="table table-striped">
                 <thead>
                     <tr>
                         <th scope="col">Item</th>
-                        <th scope="col">Type/Material</th>
-                        <th scope="col">Size</th>
-                        <th scope="col">Price</th>
-                        <th scope="col">Category Quantity</th>
+                        <th scope="col">Category</th>
+                        <th scope="col">Total Quantity</th>
+                        <th scope="col">Total Buying Price</th>
+                        <th scope="col">Total Selling Price</th>
+                        <th scope="col">Total Profit</th>
                         <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="productTableBody">
-                    {% for product in products %}
+                    {% for category_item, group in grouped_products.items() %}
+                    {% set formatted_code = category_item|replace(' ', '_')|replace('-', '_') %}
                     <tr>
-                        <td>{{ product.item }}</td>
-                        <td>{{ product.type_material }}</td>
-                        <td>{{ product.size }}</td>
-                        <td>KSh {{ product.price }}</td>
-                        <td>{{ product.total_quantity }}</td>
+                        <td>{{ category_item.split(' - ')[1] }}</td>
+                        <td>{{ category_item.split(' - ')[0] }}</td>
+                        <td>{{ group.total_quantity }}</td>
+                        <td>{{ group.total_buying_price }}</td>
+                        <td>{{ group.total_selling_price }}</td>
+                        <td>{{ group.total_profit }}</td>
                         <td>
-                            <button class="btn btn-info toggle-button" 
-                                    data-item="{{ product.item }}"
-                                    data-type-material="{{ product.type_material }}"
-                                    data-size="{{ product.size }}"
-                                    data-price="{{ product.price }}">
-                                <img src="{{ url_for('static', filename='dropdown-list.ico') }}" alt="List" style="width: 20px;">
-                            </button>
-                            <a href="{{ url_for('update_product', code=product.code) }}" class="btn btn-warning btn-sm">Update</a>
-                            <form action="{{ url_for('delete_product', code=product.code) }}" method="post" style="display:inline;">
-                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                            </form>
+                            <button class="btn btn-info toggle-button" data-code="{{ formatted_code }}">Expand</button>
                         </td>
                     </tr>
-                    <tr id="items_{{ product.item.replace(' ', '_') }}" class="nested-table-container d-none">
-                        <td colspan="6">
-                            <!-- Nested items will be loaded here dynamically -->
+                    <tr id="items_{{ formatted_code }}" class="nested-table-container d-none">
+                        <td colspan="7">
+                            <!-- Nested table will be populated here by JS -->
                         </td>
                     </tr>
                     {% endfor %}
@@ -76,22 +69,4 @@
     </div>
 </div>
 <script src="{{ url_for('static', filename='search.js') }}"></script>
-<script>
-    document.getElementById('addDataButton').addEventListener('click', function() {
-        fetch('/add_data_to_db')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                alert(data.message);
-            })
-            .catch(error => {
-                console.error('Error adding data to database:', error);
-                alert('Error adding data to database.');
-            });
-    });
-</script>
 {% endblock %}

@@ -8,8 +8,6 @@ from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 from .utils import generate_tag, prefixes
 from add_data import add_products_from_csv
-# from weasyprint import HTML
-
 
 # Define routes and views
 @app.route('/handle_barcode/<barcode>', methods=['GET'])
@@ -25,7 +23,6 @@ def handle_barcode(barcode):
 
     if action == 'add':
         # Handle product addition
-        # Add your logic for adding the product here
         return jsonify({'action': 'add', 'product': product.serialize()})
     elif action == 'delete':
         # Handle product deletion
@@ -100,50 +97,106 @@ def initial():
 @app.route('/index')
 @login_required
 def index():
-    all_products = Product.query.all()
-    sold_product_codes = [sale.product_code for sale in Sale.query.all()]
-    unsold_products = [product for product in all_products if product.code not in sold_product_codes]
-    return render_template('index.html', products=unsold_products)
+    unsold_products = Product.query.filter(Product.quantity > 0).all()
+    
+    # Example logic to group products by item and category
+    grouped_products = {}
+    for product in unsold_products:
+        key = (product.item, product.category)
+        if key not in grouped_products:
+            grouped_products[key] = {
+                'products': [],
+                'total_quantity': 0,
+                'total_buying_price': 0,
+                'total_selling_price': 0,
+                'total_profit': 0
+            }
+        grouped_products[key]['products'].append(product)
+        grouped_products[key]['total_quantity'] += product.quantity
+        grouped_products[key]['total_buying_price'] += product.buying_price * product.quantity
+        grouped_products[key]['total_selling_price'] += product.selling_price * product.quantity
+        grouped_products[key]['total_profit'] += product.profit * product.quantity
+    
+    grouped_products_display = {
+        f"{k[1]} - {k[0]}": v for k, v in grouped_products.items()
+    }
+    
+    return render_template('index.html', grouped_products=grouped_products_display)
 
-# Product management routes
+
 @app.route('/expand_items', methods=['POST'])
 @login_required
 def expand_items():
-    data = request.get_json()
-    item = data.get('item')
-    type_material = data.get('type_material')
-    size = data.get('size')
-    price = data.get('price')
+    try:
+        data = request.get_json()
 
-    if not all([item, type_material, size, price]):
-        return jsonify({'error': 'Invalid parameters'}), 400
+        if not data or 'item' not in data:
+            return jsonify({'error': 'Invalid request data'}), 400
 
-    products = Product.query.filter_by(
-        item=item,
-        type_material=type_material,
-        size=size,
-        price=price
-    ).filter(Product.quantity > 0).all()
+        category_item = data['item']
+        category, item = category_item.split('___')
+        products = Product.query.filter_by(category=category, item=item).all()
 
-    product_data = [
-        {
+        if not products:
+            return jsonify({'error': 'No products found'}), 404
+
+        products_data = [
+            {
+                'code': product.code,
+                'size': product.size,
+                'type_material': product.type_material,
+                'color': product.color,
+                'description': product.description,
+                'buying_price': product.buying_price,
+                'selling_price': product.selling_price,
+                'profit': product.profit,
+                'quantity': product.quantity
+            }
+            for product in products
+        ]
+
+        return jsonify({'products': products_data})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/get_items_by_code', methods=['POST'])
+@login_required
+def get_items_by_code():
+    try:
+        data = request.get_json()
+        code = data.get('code')
+
+        if not code:
+            return jsonify({'error': 'No code provided'}), 400
+
+        product = Product.query.filter_by(code=code).first()
+
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+
+        product_data = {
             'code': product.code,
             'item': product.item,
+            'category': product.category,
             'type_material': product.type_material,
             'size': product.size,
             'color': product.color,
             'description': product.description,
-            'price': product.price,
+            'buying_price': product.buying_price,
+            'selling_price': product.selling_price,
+            'profit': product.profit,
             'quantity': product.quantity
-        } 
-        for product in products
-    ]
+        }
 
-    return jsonify(product_data)
+        return jsonify(product_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 
 @app.route('/grouped_products', methods=['GET'])
 @login_required
-
 def grouped_products():
     products = Product.query.filter(Product.quantity > 0).all()
     grouped_products = {}
@@ -155,7 +208,6 @@ def grouped_products():
         grouped_products[category].append(product)
 
     return jsonify(grouped_products)
-
 
 @app.route('/add_product', methods=['GET', 'POST'])
 @login_required
@@ -219,8 +271,6 @@ def add_product():
     
     return render_template('add_product.html', form=form)
 
-
-
 @app.route('/update_product/<string:code>', methods=['GET', 'POST'])
 @login_required
 def update_product(code):
@@ -259,18 +309,37 @@ def filter_products():
         )
     ).all()
 
+    grouped_products = {}
+    for product in filtered_products:
+        key = (product.item, product.category)
+        if key not in grouped_products:
+            grouped_products[key] = []
+        grouped_products[key].append(product)
+    
     filtered_products_data = [
         {
-            'item': product.item,
-            'type_material': product.type_material,
-            'size': product.size,
-            'price': product.price
-        } 
-        for product in filtered_products
+            'category': category,
+            'item': item,
+            'products': [
+                {
+                    'code': product.code,
+                    'item': product.item,
+                    'category': product.category,
+                    'type_material': product.type_material,
+                    'size': product.size,
+                    'color': product.color,
+                    'description': product.description,
+                    'buying_price': product.buying_price,
+                    'selling_price': product.selling_price,
+                    'profit': product.profit,
+                    'quantity': product.quantity
+                } for product in products
+            ]
+        }
+        for (item, category), products in grouped_products.items()
     ]
 
     return jsonify({'products': filtered_products_data})
-
 
 @app.route('/add_data_to_db')
 @login_required
@@ -298,28 +367,17 @@ def sales():
     if start_date:
         start_date = datetime.strptime(start_date, '%Y-%m-%d')
         sales_query = sales_query.filter(Sale.sale_date >= start_date)
-
     if end_date:
         end_date = datetime.strptime(end_date, '%Y-%m-%d')
         sales_query = sales_query.filter(Sale.sale_date <= end_date)
-
-    if product_codes and product_codes != ['']:
-        sales_query = sales_query.filter(Sale.product_code.in_(product_codes))
-
+    if product_codes:
+        sales_query = sales_query.filter(Product.code.in_(product_codes))
     if entered_product_code:
-        sales_query = sales_query.filter(Sale.product_code == entered_product_code)
+        sales_query = sales_query.filter(Product.code == entered_product_code)
 
     sales = sales_query.all()
-    products = Product.query.all()
-    total_sales_amount = sum(sale.quantity_sold * sale.product.price for sale in sales)
 
-    if filtering_criteria_present:
-        if sales:
-            flash('Sales filtered successfully!', 'success')
-        else:
-            flash('No sales found matching the criteria.', 'warning')
-
-    return render_template('sales.html', sales=sales, total_sales_amount=total_sales_amount, products=products)
+    return render_template('sales.html', sales=sales, filtering_criteria_present=filtering_criteria_present)
 
 @app.route('/make_sale', methods=['GET', 'POST'])
 @login_required
@@ -368,138 +426,21 @@ def make_sale():
 
     return render_template('make_sales.html')
 
-def generate_invoice_pdf(invoice):
-    html_content = f'''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <title>Invoice</title>
-        <style>
-            body {{
-                font-family: Arial, sans-serif;
-                margin: 40px;
-            }}
-            .title {{
-                text-align: center;
-                font-size: 24px;
-                margin-bottom: 20px;
-            }}
-            .customer-details, .total-amount {{
-                margin-bottom: 10px;
-                font-size: 14px;
-            }}
-            .invoice-items {{
-                width: 100%;
-                border-collapse: collapse;
-                margin-top: 20px;
-            }}
-            .invoice-items th, .invoice-items td {{
-                border: 1px solid #ddd;
-                padding: 8px;
-                text-align: left;
-            }}
-            .invoice-items th {{
-                background-color: #f2f2f2;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="title">Invoice</div>
-        <div class="customer-details">Customer: {invoice.customer_name}</div>
-        <div class="customer-details">Email: {invoice.customer_email}</div>
-        <div class="total-amount">Total Amount: ${invoice.total_amount}</div>
-        
-        <table class="invoice-items">
-            <thead>
-                <tr>
-                    <th>Product Code</th>
-                    <th>Quantity</th>
-                    <th>Price</th>
-                </tr>
-            </thead>
-            <tbody>
-                {''.join([f'<tr><td>{item.product_code}</td><td>{item.quantity}</td><td>{item.product.price}</td></tr>' for item in invoice.items])}
-            </tbody>
-        </table>
-    </body>
-    </html>
-    '''
-
-    pdf_file_path = f"invoice_{invoice.id}.pdf"
-    HTML(string=html_content).write_pdf(pdf_file_path)
-    return pdf_file_path
-
-@app.route('/invoice/<int:invoice_id>/print', methods=['GET'])
-@login_required
-def print_invoice(invoice_id):
-    invoice = Invoice.query.get_or_404(invoice_id)
-    return render_template('print_invoice.html', invoice=invoice)
-
-@app.route('/get_product_details/<code>', methods=['GET'])
-def get_product_details(code):
-    product = Product.query.filter_by(code=code).first()
-    if product:
-        return jsonify(product.serialize())
-    else:
-        return jsonify({'error': 'Product not found'}), 404
-
 @app.route('/invoices', methods=['GET'])
 @login_required
 def invoices():
-    # Get search parameters from request
-    search_term = request.args.get('search_term')
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    invoice_id = request.args.get('invoice_id')
+    invoices_query = Invoice.query.join(User)
+    invoice_number = request.args.get('invoice_number')
+    entered_product_code = request.args.get('product_code')
 
     # Check if any filtering criteria are present
-    filtering_criteria_present = search_term or start_date or end_date or invoice_id
+    filtering_criteria_present = invoice_number or entered_product_code
 
-    # Query invoices based on search parameters
-    query = Invoice.query
+    if invoice_number:
+        invoices_query = invoices_query.filter(Invoice.invoice_number == invoice_number)
+    if entered_product_code:
+        invoices_query = invoices_query.join(InvoiceItem).join(Product).filter(Product.code == entered_product_code)
 
-    if search_term:
-        query = query.filter(
-            or_(
-                Invoice.customer_name.ilike(f'%{search_term}%'),
-                Invoice.customer_email.ilike(f'%{search_term}%')
-            )
-        )
+    invoices = invoices_query.all()
 
-    if start_date:
-        start_date = datetime.strptime(start_date, '%Y-%m-%d')
-        query = query.filter(Invoice.date_created >= start_date)
-
-    if end_date:
-        end_date = datetime.strptime(end_date, '%Y-%m-%d')
-        query = query.filter(Invoice.date_created <= end_date)
-
-    if invoice_id:
-        query = query.filter(Invoice.id == invoice_id)
-
-    all_invoices = query.all()
-
-    # Only flash messages if filtering criteria are present
-    if filtering_criteria_present:
-        if all_invoices:
-            flash('Invoices filtered successfully!', 'success')
-        else:
-            flash('No invoices found matching the criteria.', 'warning')
-
-    return render_template('all_invoices.html', invoices=all_invoices)
-
-
-@app.route('/generate_invoice', methods=['GET', 'POST'])
-def generate_invoice():
-    if request.method == 'POST':
-        customer_name = request.form['customer_name']
-        total_amount = request.form['total_amount']
-        new_invoice = Invoice(customer_name=customer_name, total_amount=total_amount)
-        db.session.add(new_invoice)
-        db.session.commit()
-
-        flash('Invoice generated successfully!', 'success')
-        return redirect(url_for('index'))
-
-    return render_template('make_sales.html')
+    return render_template('invoices.html', invoices=invoices, filtering_criteria_present=filtering_criteria_present)

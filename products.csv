@@ -1,4 +1,4 @@
-code,item,category,type_material,size,color,description,buying_price,selling_price,quantity
+code,item,Category,type_material,size,color,description,buying_price,selling_price,quantity
 SC0001,Shirt,Casual,Cotton,M,Blue,Blue casual cotton shirt,10,15,1
 SC0002,Shirt,Casual,Cotton,L,Red,Red casual cotton shirt,10,15,1
 SC0003,Shirt,Casual,Linen,S,White,White casual linen shirt,12,18,1
@@ -63,3 +63,4 @@ SHC0001,Shoes,Casual,Leather,10,Brown,Brown casual leather shoes,35,50,1
 SHC0002,Shoes,Casual,Canvas,9,Blue,Blue casual canvas shoes,25,35,1
 SHC0003,Shoes,Casual,Suede,11,Black,Black casual suede shoes,30,45,1
 SHC0004,Shoes,Casual,Blended,8,White,White casual blended shoes,20,30,1
+SHC0005,Shoes,Casual,Blended,9,White,White casual blended shoes,20,30,1
